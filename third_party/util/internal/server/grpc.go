@@ -1,16 +1,16 @@
 package server
 
 import (
-	v1 "gitee.com/moyusir/service-centre/api/serviceCenter/v1"
-	"gitee.com/moyusir/service-centre/internal/conf"
-	"gitee.com/moyusir/service-centre/internal/service"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
+	v1 "util/api/helloworld/v1"
+	"util/internal/conf"
+	"util/internal/service"
 )
 
 // NewGRPCServer new a gRPC server.
-func NewGRPCServer(c *conf.Server, us *service.UserService, logger log.Logger) *grpc.Server {
+func NewGRPCServer(c *conf.Server, greeter *service.GreeterService, logger log.Logger) *grpc.Server {
 	var opts = []grpc.ServerOption{
 		grpc.Middleware(
 			recovery.Recovery(),
@@ -26,6 +26,6 @@ func NewGRPCServer(c *conf.Server, us *service.UserService, logger log.Logger) *
 		opts = append(opts, grpc.Timeout(c.Grpc.Timeout.AsDuration()))
 	}
 	srv := grpc.NewServer(opts...)
-	v1.RegisterUserServer(srv, us)
+	v1.RegisterGreeterServer(srv, greeter)
 	return srv
 }

@@ -1,13 +1,13 @@
 package data
 
 import (
-	"gitee.com/moyusir/service-centre/internal/conf"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/wire"
+	"util/internal/conf"
 )
 
 // ProviderSet is data providers.
-var ProviderSet = wire.NewSet(NewData)
+var ProviderSet = wire.NewSet(NewData, NewGreeterRepo)
 
 // Data .
 type Data struct {

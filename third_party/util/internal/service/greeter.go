@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/go-kratos/kratos/v2/log"
-	v1 "serviceCenter/api/helloworld/v1"
-	"serviceCenter/internal/biz"
+	v1 "util/api/helloworld/v1"
+	"util/internal/biz"
 )
 
 // GreeterService is a greeter service.

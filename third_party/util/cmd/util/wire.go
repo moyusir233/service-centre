@@ -6,14 +6,14 @@
 package main
 
 import (
-	"gitee.com/moyusir/service-centre/internal/biz"
-	"gitee.com/moyusir/service-centre/internal/conf"
-	"gitee.com/moyusir/service-centre/internal/data"
-	"gitee.com/moyusir/service-centre/internal/server"
-	"gitee.com/moyusir/service-centre/internal/service"
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/wire"
+	"util/internal/biz"
+	"util/internal/conf"
+	"util/internal/data"
+	"util/internal/server"
+	"util/internal/service"
 )
 
 // initApp init kratos application.

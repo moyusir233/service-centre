@@ -1,4 +1,4 @@
-module gitee.com/moyusir/graduation-design/backend/serviceCenter
+module gitee.com/moyusir/service-centre
 
 go 1.16
 
