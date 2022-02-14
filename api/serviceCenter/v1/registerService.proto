@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package api.serviceCenter.v1;
+
+option go_package = "gitee.com/moyusir/graduation-design/backend/serviceCenter/api/serviceCenter/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.serviceCenter.v1";
+
+import "google/protobuf/duration.proto";
+// 提供用户注册、配置注册、设备状态信息注册等相关服务
+service RegisterService {
+
+}
