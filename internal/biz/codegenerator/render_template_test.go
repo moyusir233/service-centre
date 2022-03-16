@@ -6,12 +6,7 @@ import (
 	"testing"
 )
 
-func TestDataCollection_RenderConfigTmpl(t *testing.T) {
-	renderer, err := newDataCollectionTmplRenderer("data-collection-template")
-	if err != nil {
-		t.Fatal(err)
-	}
-
+func TestRenderServiceTmpl(t *testing.T) {
 	configs := []Device{
 		{
 			DeviceClassID: 0,
@@ -21,8 +16,8 @@ func TestDataCollection_RenderConfigTmpl(t *testing.T) {
 					Type: "string",
 				},
 				{
-					Name: "test0_1",
-					Type: "int64",
+					Name: "status",
+					Type: "bool",
 				},
 			},
 		},
@@ -34,41 +29,12 @@ func TestDataCollection_RenderConfigTmpl(t *testing.T) {
 					Type: "string",
 				},
 				{
-					Name: "test1_1",
-					Type: "int64",
+					Name: "status",
+					Type: "bool",
 				},
 			},
 		},
 	}
-	code, proto, err := renderer.renderConfigTmpl(configs)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Logf("%s\n%s", code.String(), proto.String())
-
-	files := []string{"output/config.go", "output/config.proto"}
-	buffers := []*bytes.Buffer{code, proto}
-	for i, f := range files {
-		file, err := os.Create(f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer file.Close()
-
-		_, err = buffers[i].WriteTo(file)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func TestDataCollection_RenderWarningDetectTmpl(t *testing.T) {
-	renderer, err := newDataCollectionTmplRenderer("data-collection-template")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	states := []Device{
 		{
 			DeviceClassID: 0,
@@ -82,7 +48,15 @@ func TestDataCollection_RenderWarningDetectTmpl(t *testing.T) {
 					Type: "google.protobuf.Timestamp",
 				},
 				{
-					Name: "Current",
+					Name: "voltage",
+					Type: "double",
+				},
+				{
+					Name: "current",
+					Type: "double",
+				},
+				{
+					Name: "temperature",
 					Type: "double",
 				},
 			},
@@ -99,18 +73,34 @@ func TestDataCollection_RenderWarningDetectTmpl(t *testing.T) {
 					Type: "google.protobuf.Timestamp",
 				},
 				{
-					Name: "Current",
+					Name: "voltage",
+					Type: "double",
+				},
+				{
+					Name: "current",
+					Type: "double",
+				},
+				{
+					Name: "temperature",
 					Type: "double",
 				},
 			},
 		},
 	}
-	warningDetectStates := []Device{
+	warningDetectInfo := []Device{
 		{
 			DeviceClassID: 0,
 			Fields: []Field{
 				{
-					Name: "Current",
+					Name: "voltage",
+					Type: "double",
+				},
+				{
+					Name: "current",
+					Type: "double",
+				},
+				{
+					Name: "temperature",
 					Type: "double",
 				},
 			},
@@ -119,31 +109,76 @@ func TestDataCollection_RenderWarningDetectTmpl(t *testing.T) {
 			DeviceClassID: 1,
 			Fields: []Field{
 				{
-					Name: "Current",
+					Name: "voltage",
+					Type: "double",
+				},
+				{
+					Name: "current",
+					Type: "double",
+				},
+				{
+					Name: "temperature",
 					Type: "double",
 				},
 			},
 		},
 	}
-	code, proto, err := renderer.renderWarningDetectTmpl(states, warningDetectStates)
+
+	collectionTmplRenderer, err := newDataCollectionTmplRenderer("data-collection-template")
+	if err != nil {
+		t.Fatal(err)
+	}
+	processingTmplRenderer, err := newDataProcessingTmplRenderer("data-processing-template")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Logf("%s\n%s", code.String(), proto.String())
-
-	files := []string{"output/warning_detect.go", "output/warningDetect.proto"}
-	buffers := []*bytes.Buffer{code, proto}
-	for i, f := range files {
-		file, err := os.Create(f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer file.Close()
-
-		_, err = buffers[i].WriteTo(file)
-		if err != nil {
-			t.Fatal(err)
-		}
+	dirs := []string{"output/data-collection", "output/data-processing"}
+	for _, dir := range dirs {
+		os.MkdirAll(dir, os.ModeDir)
 	}
+
+	var buffers []*bytes.Buffer
+
+	configCode1, configProto1, err := collectionTmplRenderer.renderConfigTmpl(configs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffers = append(buffers, configCode1, configProto1)
+
+	wdCode1, wdProto1, err := collectionTmplRenderer.renderWarningDetectTmpl(states, warningDetectInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffers = append(buffers, wdCode1, wdProto1)
+
+	configCode2, configProto2, err := processingTmplRenderer.renderConfigTmpl(configs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffers = append(buffers, configCode2, configProto2)
+
+	wdCode2, wdProto2, err := processingTmplRenderer.renderWarningDetectTmpl(states)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffers = append(buffers, wdCode2, wdProto2)
+
+	prefixs := []string{"config", "warning_detect"}
+	suffixs := []string{".go", ".proto"}
+	for i, b := range buffers {
+		dir := dirs[i/4]
+		prefix := prefixs[i/2%2]
+		suffix := suffixs[i%2]
+		file, err := os.Create(dir + "/" + prefix + suffix)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = b.WriteTo(file)
+		if err != nil {
+			return
+		}
+		file.Close()
+	}
+
 }

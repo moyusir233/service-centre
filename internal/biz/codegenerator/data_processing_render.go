@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 )
 
-type dataCollectionTmplRenderer struct {
+type dataProcessingTmplRenderer struct {
 	*generalRenderer
 }
 
-func newDataCollectionTmplRenderer(root string) (*dataCollectionTmplRenderer, error) {
+func newDataProcessingTmplRenderer(root string) (*dataProcessingTmplRenderer, error) {
 	renderer := newGeneralRenderer()
 	var err error
 
@@ -19,11 +19,10 @@ func newDataCollectionTmplRenderer(root string) (*dataCollectionTmplRenderer, er
 		return nil, err
 	}
 
-	return &dataCollectionTmplRenderer{generalRenderer: renderer}, nil
+	return &dataProcessingTmplRenderer{generalRenderer: renderer}, nil
 }
 
-// 渲染配置管理相关的go源码模板和protobuf服务定义模板
-func (r *dataCollectionTmplRenderer) renderConfigTmpl(configs []Device) (
+func (r *dataProcessingTmplRenderer) renderConfigTmpl(configs []Device) (
 	Code *bytes.Buffer, Proto *bytes.Buffer, err error) {
 
 	options := []renderOption{
@@ -45,13 +44,12 @@ func (r *dataCollectionTmplRenderer) renderConfigTmpl(configs []Device) (
 	return buffers[0], buffers[1], nil
 }
 
-// 渲染故障预警相关的go源码模板和protobuf服务定义模板
-func (r *dataCollectionTmplRenderer) renderWarningDetectTmpl(states []Device, warningDetectStates []Device) (
+func (r *dataProcessingTmplRenderer) renderWarningDetectTmpl(states []Device) (
 	Code *bytes.Buffer, Proto *bytes.Buffer, err error) {
 	options := []renderOption{
 		{
 			tmplName: "warning_detect.go.template",
-			data:     warningDetectStates,
+			data:     states,
 		},
 		{
 			tmplName: "warningDetect.proto.template",
