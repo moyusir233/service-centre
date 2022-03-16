@@ -7,35 +7,52 @@ import "google/protobuf/duration.proto";
 
 message Bootstrap {
   Server server = 1;
-  Data data = 2;
+  Service service = 2;
+  Data data = 3;
 }
 
 message Server {
   message HTTP {
     string network = 1;
     string addr = 2;
-    google.protobuf.Duration timeout = 3;
+    google.protobuf.Duration timeout = 4;
   }
   message GRPC {
     string network = 1;
     string addr = 2;
     google.protobuf.Duration timeout = 3;
   }
+  message Gateway {
+    string address = 1;
+  }
   HTTP http = 1;
   GRPC grpc = 2;
+  Gateway gateway = 3;
+}
+
+message Service{
+  message CodeGenerator{
+    // 服务相应模板文件所在的文件目录，是相对于渲染模板代码文件的相对路径
+    string data_collection_tmpl_root=1;
+    string data_processing_tmpl_root=2;
+  }
+  CodeGenerator code_generator = 1;
 }
 
 message Data {
-  message Database {
-    string driver = 1;
-    string source = 2;
-  }
   message Redis {
-    string network = 1;
-    string addr = 2;
-    google.protobuf.Duration read_timeout = 3;
-    google.protobuf.Duration write_timeout = 4;
+    // redis service的主机地址
+    string host = 1;
+    // redis server端口
+    int64 server_port = 2;
+    // redis sentinel端口
+    int64 sentinel_port = 3;
+    // redis sentinel集群使用的master标识名
+    string master_name = 4;
+    // redis连接池大小
+    int64 pool_size = 5;
+    // redis连接池的最小空闲连接数
+    int64 min_idle_conns = 6;
   }
-  Database database = 1;
-  Redis redis = 2;
+  Redis redis = 1;
 }
