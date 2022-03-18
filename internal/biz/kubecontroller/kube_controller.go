@@ -2,26 +2,44 @@
 package kubecontroller
 
 import (
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	"fmt"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type KubeController struct {
-	client *kubernetes.Clientset
+	*baseKubeController
 }
 
-func NewKubeController() (*KubeController, error) {
-	// 通过service account获得访问api server的config实例
-	config, err := rest.InClusterConfig()
+func NewKubeController(namespace string) (*KubeController, error) {
+	controller, err := newBaseKubeController(namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	// 建立访问k8s的客户端
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
+	return &KubeController{baseKubeController: controller}, nil
+}
 
-	return &KubeController{client: clientset}, nil
+// CreateConfigMapOfGeneratedCode 为dataCollection与dataProcessing服务生成的代码创建configMap
+func (c *KubeController) CreateConfigMapOfGeneratedCode(username string, dcCode, dpCode map[string]string) (
+	dcCm *corev1.ConfigMap, dpCm *corev1.ConfigMap, err error) {
+	// 保存生成代码的cm统一以<用户名>-<服务名简写,dc或dp>-code命名
+	// 并以user:username作为label
+	dcName := fmt.Sprintf("%s-%s-code", username, "dc")
+	dpName := fmt.Sprintf("%s-%s-code", username, "dp")
+	label := map[string]string{"user": username}
+
+	dcCm, err = c.CreateConfigMap(dcName, label, dcCode)
+	if err != nil {
+		return nil, nil, err
+	}
+	dpCm, err = c.CreateConfigMap(dpName, label, dpCode)
+	if err != nil {
+		return nil, nil, err
+	}
+	return
+}
+
+// CreateConfigMapOfStateRegisterInfo 创建保存设备状态注册信息的configMap
+func (c *KubeController) CreateConfigMapOfStateRegisterInfo() {
+
 }

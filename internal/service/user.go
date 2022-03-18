@@ -9,13 +9,11 @@ import (
 
 type UserService struct {
 	pb.UnimplementedUserServer
-	uc            *biz.UserUsecase
-	codeGenerator *biz.CodeGenerateUsecase
-	kubectl       *biz.KubeControlUsecase
+	uc *biz.UserUsecase
 }
 
-func NewUserService() *UserService {
-	return &UserService{}
+func NewUserService(uc *biz.UserUsecase) *UserService {
+	return &UserService{uc: uc}
 }
 
 func (s *UserService) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterReply, error) {

@@ -1,7 +1,6 @@
 package server
 
 import (
-	v1 "gitee.com/moyusir/service-centre/api/serviceCenter/v1"
 	"gitee.com/moyusir/service-centre/internal/conf"
 	"gitee.com/moyusir/service-centre/internal/service"
 	"github.com/go-kratos/kratos/v2/log"
