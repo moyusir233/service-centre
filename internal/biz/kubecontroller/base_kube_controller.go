@@ -75,6 +75,7 @@ func (c *baseKubeController) CreateService(
 // CreateDeployment 创建指定的deployment，并执行watch直到deployment能够提供服务
 func (c *baseKubeController) CreateDeployment(
 	name string, labels map[string]string,
+	timeout time.Duration,
 	spec *client_appsv1.DeploymentSpecApplyConfiguration) (*appsv1.Deployment, error) {
 	deploymentApplyConfiguration := client_appsv1.Deployment(name, c.namespace).
 		WithLabels(labels).WithSpec(spec)
@@ -118,12 +119,12 @@ func (c *baseKubeController) CreateDeployment(
 	defer w.Stop()
 
 	// 设置等待更新的计时器为五分钟
-	timeout := time.After(5 * time.Minute)
+	timer := time.After(timeout)
 	for {
 		select {
-		case <-timeout:
+		case <-timer:
 			// 超时，删除创建的deployment
-			c.DeleteResource("deployment", deployment.Name, deployment.TypeMeta)
+			c.DeleteResource(deployment.Name, deployment.TypeMeta)
 
 			return nil, errors.New(
 				500, "CREATE_DEPLOYMENT_FAIL", "failed to create the deployment")
@@ -145,6 +146,7 @@ func (c *baseKubeController) CreateDeployment(
 // CreateStatefulSet 创建指定的statefulSet,并执行watch直到statefulSet能够提供服务
 func (c *baseKubeController) CreateStatefulSet(
 	name string, labels map[string]string,
+	timeout time.Duration,
 	spec *client_appsv1.StatefulSetSpecApplyConfiguration) (*appsv1.StatefulSet, error) {
 	statefulSetApplyConfiguration := client_appsv1.StatefulSet(name, c.namespace).
 		WithLabels(labels).WithSpec(spec)
@@ -184,12 +186,12 @@ func (c *baseKubeController) CreateStatefulSet(
 	defer w.Stop()
 
 	// 设置等待更新的计时器为五分钟
-	timeout := time.After(5 * time.Minute)
+	timer := time.After(timeout)
 	for {
 		select {
-		case <-timeout:
+		case <-timer:
 			// 超时，删除创建的statefulSet
-			c.DeleteResource("statefulSet", statefulSet.Name, statefulSet.TypeMeta)
+			c.DeleteResource(statefulSet.Name, statefulSet.TypeMeta)
 
 			return nil, errors.New(
 				500, "CREATE_STATEFULSET_FAIL", "failed to create the statefulSet")
@@ -209,9 +211,9 @@ func (c *baseKubeController) CreateStatefulSet(
 }
 
 // DeleteResource 删除指定的k8s资源
-func (c *baseKubeController) DeleteResource(resourceType, name string, meta client_metav1.TypeMeta) error {
-	switch resourceType {
-	case "service":
+func (c *baseKubeController) DeleteResource(name string, meta client_metav1.TypeMeta) error {
+	switch meta.Kind {
+	case "Service":
 		return c.client.CoreV1().Services(c.namespace).Delete(
 			context.Background(),
 			name,
@@ -219,7 +221,7 @@ func (c *baseKubeController) DeleteResource(resourceType, name string, meta clie
 				TypeMeta: meta,
 			},
 		)
-	case "configMap":
+	case "ConfigMap":
 		return c.client.CoreV1().ConfigMaps(c.namespace).Delete(
 			context.Background(),
 			name,
@@ -227,7 +229,7 @@ func (c *baseKubeController) DeleteResource(resourceType, name string, meta clie
 				TypeMeta: meta,
 			},
 		)
-	case "deployment":
+	case "Deployment":
 		return c.client.AppsV1().Deployments(c.namespace).Delete(
 			context.Background(),
 			name,
@@ -235,12 +237,48 @@ func (c *baseKubeController) DeleteResource(resourceType, name string, meta clie
 				TypeMeta: meta,
 			},
 		)
-	case "statefulSet":
+	case "StatefulSet":
 		return c.client.AppsV1().StatefulSets(c.namespace).Delete(
 			context.Background(),
 			name,
 			client_metav1.DeleteOptions{
 				TypeMeta: meta,
+			},
+		)
+	default:
+		return errors.New(
+			500, "UNKNOWN_RESOURCE_TYPE", "can't delete the unknown resource")
+	}
+}
+
+// DeleteResources 依据label批量删除指定的k8s资源
+func (c *baseKubeController) DeleteResources(meta client_metav1.TypeMeta, labelSelector string) error {
+	switch meta.Kind {
+	case "ConfigMap":
+		return c.client.CoreV1().ConfigMaps(c.namespace).DeleteCollection(
+			context.Background(),
+			client_metav1.DeleteOptions{TypeMeta: meta},
+			client_metav1.ListOptions{
+				TypeMeta:      meta,
+				LabelSelector: labelSelector,
+			},
+		)
+	case "Deployment":
+		return c.client.AppsV1().Deployments(c.namespace).DeleteCollection(
+			context.Background(),
+			client_metav1.DeleteOptions{TypeMeta: meta},
+			client_metav1.ListOptions{
+				TypeMeta:      meta,
+				LabelSelector: labelSelector,
+			},
+		)
+	case "StatefulSet":
+		return c.client.AppsV1().StatefulSets(c.namespace).DeleteCollection(
+			context.Background(),
+			client_metav1.DeleteOptions{TypeMeta: meta},
+			client_metav1.ListOptions{
+				TypeMeta:      meta,
+				LabelSelector: labelSelector,
 			},
 		)
 	default:

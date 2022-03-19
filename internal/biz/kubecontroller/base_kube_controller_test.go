@@ -7,6 +7,7 @@ import (
 	client_corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	client_metav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"testing"
+	"time"
 )
 
 func Test_baseKubeController_CreateDeployment(t *testing.T) {
@@ -50,12 +51,13 @@ func Test_baseKubeController_CreateDeployment(t *testing.T) {
 		},
 	}
 
-	deployment, err := controller.CreateDeployment("test", map[string]string{"app": "test"}, &deploySpec)
+	deployment, err := controller.CreateDeployment(
+		"test", map[string]string{"app": "test"}, 5*time.Minute, &deploySpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		controller.DeleteResource("deployment", deployment.Name, deployment.TypeMeta)
+		controller.DeleteResource(deployment.Name, deployment.TypeMeta)
 	})
 }
 
@@ -89,7 +91,7 @@ func Test_baseKubeController_CreateStatefulSet(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		controller.DeleteResource("service", service.Name, service.TypeMeta)
+		controller.DeleteResource(service.Name, service.TypeMeta)
 	})
 
 	// 创建statefulSet
@@ -129,11 +131,11 @@ func Test_baseKubeController_CreateStatefulSet(t *testing.T) {
 		ServiceName: &service.Name,
 	}
 
-	statefulSet, err := controller.CreateStatefulSet("test", label, &statefulSetSpec)
+	statefulSet, err := controller.CreateStatefulSet("test", label, 5*time.Minute, &statefulSetSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		controller.DeleteResource("statefulSet", statefulSet.Name, statefulSet.TypeMeta)
+		controller.DeleteResource(statefulSet.Name, statefulSet.TypeMeta)
 	})
 }
