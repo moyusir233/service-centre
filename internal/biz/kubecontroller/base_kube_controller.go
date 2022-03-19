@@ -124,7 +124,7 @@ func (c *baseKubeController) CreateDeployment(
 		select {
 		case <-timer:
 			// 超时，删除创建的deployment
-			c.DeleteResource(deployment.Name, deployment.TypeMeta)
+			c.DeleteResource(deployment.Name, "Deployment")
 
 			return nil, errors.New(
 				500, "CREATE_DEPLOYMENT_FAIL", "failed to create the deployment")
@@ -191,10 +191,10 @@ func (c *baseKubeController) CreateStatefulSet(
 		select {
 		case <-timer:
 			// 超时，删除创建的statefulSet
-			c.DeleteResource(statefulSet.Name, statefulSet.TypeMeta)
+			c.DeleteResource(statefulSet.Name, "StatefulSet")
 
 			return nil, errors.New(
-				500, "CREATE_STATEFULSET_FAIL", "failed to create the statefulSet")
+				500, "CREATE_STATEFULSET_TIMEOUT", "failed to create the statefulSet")
 		case event := <-w.ResultChan():
 			if event.Type == watch.Error || event.Type == watch.Deleted {
 				return nil, errors.New(
@@ -211,39 +211,31 @@ func (c *baseKubeController) CreateStatefulSet(
 }
 
 // DeleteResource 删除指定的k8s资源
-func (c *baseKubeController) DeleteResource(name string, meta client_metav1.TypeMeta) error {
-	switch meta.Kind {
+func (c *baseKubeController) DeleteResource(name, resourceType string) error {
+	switch resourceType {
 	case "Service":
 		return c.client.CoreV1().Services(c.namespace).Delete(
 			context.Background(),
 			name,
-			client_metav1.DeleteOptions{
-				TypeMeta: meta,
-			},
+			client_metav1.DeleteOptions{},
 		)
 	case "ConfigMap":
 		return c.client.CoreV1().ConfigMaps(c.namespace).Delete(
 			context.Background(),
 			name,
-			client_metav1.DeleteOptions{
-				TypeMeta: meta,
-			},
+			client_metav1.DeleteOptions{},
 		)
 	case "Deployment":
 		return c.client.AppsV1().Deployments(c.namespace).Delete(
 			context.Background(),
 			name,
-			client_metav1.DeleteOptions{
-				TypeMeta: meta,
-			},
+			client_metav1.DeleteOptions{},
 		)
 	case "StatefulSet":
 		return c.client.AppsV1().StatefulSets(c.namespace).Delete(
 			context.Background(),
 			name,
-			client_metav1.DeleteOptions{
-				TypeMeta: meta,
-			},
+			client_metav1.DeleteOptions{},
 		)
 	default:
 		return errors.New(
@@ -252,32 +244,46 @@ func (c *baseKubeController) DeleteResource(name string, meta client_metav1.Type
 }
 
 // DeleteResources 依据label批量删除指定的k8s资源
-func (c *baseKubeController) DeleteResources(meta client_metav1.TypeMeta, labelSelector string) error {
-	switch meta.Kind {
+func (c *baseKubeController) DeleteResources(resourceType string, labelSelector string) error {
+	switch resourceType {
+	case "Service":
+		serviceList, err := c.client.CoreV1().Services(c.namespace).List(
+			context.Background(),
+			client_metav1.ListOptions{
+				LabelSelector: labelSelector,
+			},
+		)
+		if err != nil {
+			return err
+		}
+		for _, s := range serviceList.Items {
+			err := c.DeleteResource(s.Name, resourceType)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	case "ConfigMap":
 		return c.client.CoreV1().ConfigMaps(c.namespace).DeleteCollection(
 			context.Background(),
-			client_metav1.DeleteOptions{TypeMeta: meta},
+			client_metav1.DeleteOptions{},
 			client_metav1.ListOptions{
-				TypeMeta:      meta,
 				LabelSelector: labelSelector,
 			},
 		)
 	case "Deployment":
 		return c.client.AppsV1().Deployments(c.namespace).DeleteCollection(
 			context.Background(),
-			client_metav1.DeleteOptions{TypeMeta: meta},
+			client_metav1.DeleteOptions{},
 			client_metav1.ListOptions{
-				TypeMeta:      meta,
 				LabelSelector: labelSelector,
 			},
 		)
 	case "StatefulSet":
 		return c.client.AppsV1().StatefulSets(c.namespace).DeleteCollection(
 			context.Background(),
-			client_metav1.DeleteOptions{TypeMeta: meta},
+			client_metav1.DeleteOptions{},
 			client_metav1.ListOptions{
-				TypeMeta:      meta,
 				LabelSelector: labelSelector,
 			},
 		)

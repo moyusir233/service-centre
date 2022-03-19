@@ -10,6 +10,58 @@ import (
 	"time"
 )
 
+func Test_baseKubeController_DeleteResource(t *testing.T) {
+	controller, err := newBaseKubeController("test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var repicas int32 = 3
+	name := "test"
+	image := "nginx"
+	pullpolicy := corev1.PullIfNotPresent
+	port := intstr.FromInt(80)
+
+	deploySpec := client_appsv1.DeploymentSpecApplyConfiguration{
+		Replicas: &repicas,
+		Selector: &client_metav1.LabelSelectorApplyConfiguration{
+			MatchLabels: map[string]string{"app": "test"},
+		},
+		Template: &client_corev1.PodTemplateSpecApplyConfiguration{
+			ObjectMetaApplyConfiguration: &client_metav1.ObjectMetaApplyConfiguration{
+				Name:   &name,
+				Labels: map[string]string{"app": "test"},
+			},
+			Spec: &client_corev1.PodSpecApplyConfiguration{
+				Containers: []client_corev1.ContainerApplyConfiguration{
+					{
+						Name:            &name,
+						Image:           &image,
+						ImagePullPolicy: &pullpolicy,
+						ReadinessProbe: &client_corev1.ProbeApplyConfiguration{
+							HandlerApplyConfiguration: client_corev1.HandlerApplyConfiguration{
+								HTTPGet: &client_corev1.HTTPGetActionApplyConfiguration{
+									Port: &port,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	deployment, err := controller.CreateDeployment(
+		"test", map[string]string{"app": "test"}, 5*time.Minute, &deploySpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = controller.DeleteResource(deployment.Name, "Deployment")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 func Test_baseKubeController_CreateDeployment(t *testing.T) {
 	controller, err := newBaseKubeController("test")
 	if err != nil {
@@ -57,7 +109,7 @@ func Test_baseKubeController_CreateDeployment(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		controller.DeleteResource(deployment.Name, deployment.TypeMeta)
+		controller.DeleteResource(deployment.Name, "Deployment")
 	})
 }
 
@@ -91,7 +143,7 @@ func Test_baseKubeController_CreateStatefulSet(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		controller.DeleteResource(service.Name, service.TypeMeta)
+		controller.DeleteResource(service.Name, "Service")
 	})
 
 	// 创建statefulSet
@@ -136,6 +188,6 @@ func Test_baseKubeController_CreateStatefulSet(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		controller.DeleteResource(statefulSet.Name, statefulSet.TypeMeta)
+		controller.DeleteResource(statefulSet.Name, "StatefulSet")
 	})
 }

@@ -2,7 +2,6 @@
 package codegenerator
 
 import (
-	"bytes"
 	v1 "gitee.com/moyusir/util/api/util/v1"
 	"strings"
 )
@@ -10,11 +9,6 @@ import (
 type CodeGenerator struct {
 	dpRenderer *dataProcessingTmplRenderer
 	dcRenderer *dataCollectionTmplRenderer
-}
-
-type GeneratedFile struct {
-	Name    string
-	Content *bytes.Buffer
 }
 
 func NewCodeGenerator(dpTmplDir, dcTmplDir string) (*CodeGenerator, error) {
@@ -36,14 +30,14 @@ func NewCodeGenerator(dpTmplDir, dcTmplDir string) (*CodeGenerator, error) {
 
 func (g *CodeGenerator) GetServiceFiles(
 	configInfo []v1.DeviceConfigRegisterInfo, stateInfo []v1.DeviceStateRegisterInfo) (
-	dc []GeneratedFile, dp []GeneratedFile, err error) {
+	dc map[string]string, dp map[string]string, err error) {
 	var (
 		configs       = make([]Device, len(configInfo))
 		states        = make([]Device, len(stateInfo))
 		warningStates = make([]Device, len(stateInfo))
 	)
-	dc = make([]GeneratedFile, 0, 4)
-	dp = make([]GeneratedFile, 0, 4)
+	dc = make(map[string]string, 4)
+	dp = make(map[string]string, 4)
 
 	// 处理配置注册信息
 	for i, info := range configInfo {
@@ -52,7 +46,12 @@ func (g *CodeGenerator) GetServiceFiles(
 
 		for j, f := range info.Fields {
 			configs[i].Fields[j].Name = f.Name
-			configs[i].Fields[j].Type = strings.ToLower(f.Type.String())
+			// 时间戳字段需要转换声明的类型，不能直接用type的名称
+			if f.Type == v1.Type_TIMESTAMP {
+				configs[i].Fields[j].Type = "google.protobuf.Timestamp"
+			} else {
+				configs[i].Fields[j].Type = strings.ToLower(f.Type.String())
+			}
 		}
 	}
 
@@ -64,7 +63,12 @@ func (g *CodeGenerator) GetServiceFiles(
 
 		for j, f := range info.Fields {
 			states[i].Fields[j].Name = f.Name
-			states[i].Fields[j].Type = strings.ToLower(f.Type.String())
+			// 时间戳字段需要转换声明的类型，不能直接用type的名称
+			if f.Type == v1.Type_TIMESTAMP {
+				states[i].Fields[j].Type = "google.protobuf.Timestamp"
+			} else {
+				states[i].Fields[j].Type = strings.ToLower(f.Type.String())
+			}
 
 			// 预警规则不为空即为预警字段
 			if f.WarningRule != nil {
@@ -78,30 +82,30 @@ func (g *CodeGenerator) GetServiceFiles(
 	if err != nil {
 		return nil, nil, err
 	}
-	dc = append(dc, GeneratedFile{Name: "config.go", Content: dcConfigCode})
-	dc = append(dc, GeneratedFile{Name: "config.proto", Content: dcConfigProto})
+	dc["config.go"] = dcConfigCode.String()
+	dc["config.proto"] = dcConfigProto.String()
 
 	dcWarningCode, dcWarningProto, err := g.dcRenderer.renderWarningDetectTmpl(states, warningStates)
 	if err != nil {
 		return nil, nil, err
 	}
-	dc = append(dc, GeneratedFile{Name: "warning_detect.go", Content: dcWarningCode})
-	dc = append(dc, GeneratedFile{Name: "warning_detect.proto", Content: dcWarningProto})
+	dc["warning_detect.go"] = dcWarningCode.String()
+	dc["warning_detect.proto"] = dcWarningProto.String()
 
 	// 产生数据处理服务相关的代码与服务定义文件
 	dpConfigCode, dpConfigProto, err := g.dpRenderer.renderConfigTmpl(configs)
 	if err != nil {
 		return nil, nil, err
 	}
-	dp = append(dp, GeneratedFile{Name: "config.go", Content: dpConfigCode})
-	dp = append(dp, GeneratedFile{Name: "config.proto", Content: dpConfigProto})
+	dp["config.go"] = dpConfigCode.String()
+	dp["config.proto"] = dpConfigProto.String()
 
 	dpWarningCode, dpWarningProto, err := g.dpRenderer.renderWarningDetectTmpl(states)
 	if err != nil {
 		return nil, nil, err
 	}
-	dp = append(dp, GeneratedFile{Name: "warning_detect.go", Content: dpWarningCode})
-	dp = append(dp, GeneratedFile{Name: "warning_detect.proto", Content: dpWarningProto})
+	dp["warning_detect.go"] = dpWarningCode.String()
+	dp["warning_detect.proto"] = dpWarningProto.String()
 
 	return dc, dp, nil
 }

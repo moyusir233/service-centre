@@ -83,7 +83,7 @@ func (c *KubeController) CreateConfigMapOfGeneratedCode(username string, dcCode,
 	}
 	dpCm, err = c.CreateConfigMap(dpName, label, dpCode)
 	if err != nil {
-		c.DeleteResource(dcCm.Name, dcCm.TypeMeta)
+		c.DeleteResource(dcCm.Name, "ConfigMap")
 		return nil, nil, err
 	}
 	return
@@ -193,6 +193,7 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 		imagePullPollcy = corev1.PullIfNotPresent
 		restartPollcy   = corev1.RestartPolicyAlways
 		servicePort     = intstr.FromInt(8000)
+		hostPathType    = corev1.HostPathFile
 	)
 
 	return &client_appsv1.DeploymentSpecApplyConfiguration{
@@ -212,6 +213,16 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 			Spec: &client_corev1.PodSpecApplyConfiguration{
 				// 配置需要挂载的volume
 				Volumes: []client_corev1.VolumeApplyConfiguration{
+					// protobuf编译器
+					{
+						Name: pointer.String("protoc"),
+						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
+							HostPath: &client_corev1.HostPathVolumeSourceApplyConfiguration{
+								Path: pointer.String("/root/k8s-install/protobuf/protoc"),
+								Type: &hostPathType,
+							},
+						},
+					},
 					{
 						// 存放编译脚本build.sh的volume
 						Name: pointer.String("shell"),
@@ -301,8 +312,14 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 						Name:            pointer.String("build"),
 						Image:           pointer.String("golang:1.17"),
 						ImagePullPolicy: &imagePullPollcy,
-						Command:         []string{"/shell/build.sh"},
+						//Command:         []string{"/bin/bash", "-c", "sleep 3600"},
+						Command: []string{"/shell/build.sh"},
 						VolumeMounts: []client_corev1.VolumeMountApplyConfiguration{
+							// protobuf编译器
+							{
+								Name:      pointer.String("protoc"),
+								MountPath: pointer.String("/bin/protoc"),
+							},
 							// 挂载编译用的脚本
 							{
 								Name:      pointer.String("shell"),
@@ -393,7 +410,7 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 								},
 							},
 							InitialDelaySeconds: pointer.Int32(20),
-							PeriodSeconds:       pointer.Int32(60),
+							PeriodSeconds:       pointer.Int32(20),
 						},
 					},
 				},
@@ -413,6 +430,7 @@ func getDataCollectionStatefulSetSpec(
 		imagePullPollcy = corev1.PullIfNotPresent
 		restartPollcy   = corev1.RestartPolicyAlways
 		servicePort     = intstr.FromInt(8000)
+		hostPathType    = corev1.HostPathFile
 	)
 
 	return &client_appsv1.StatefulSetSpecApplyConfiguration{
@@ -432,6 +450,16 @@ func getDataCollectionStatefulSetSpec(
 			Spec: &client_corev1.PodSpecApplyConfiguration{
 				// 配置需要挂载的volume
 				Volumes: []client_corev1.VolumeApplyConfiguration{
+					// protobuf编译器
+					{
+						Name: pointer.String("protoc"),
+						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
+							HostPath: &client_corev1.HostPathVolumeSourceApplyConfiguration{
+								Path: pointer.String("/root/k8s-install/protobuf/protoc"),
+								Type: &hostPathType,
+							},
+						},
+					},
 					{
 						// 存放编译脚本build.sh的volume
 						Name: pointer.String("shell"),
@@ -507,8 +535,14 @@ func getDataCollectionStatefulSetSpec(
 						Name:            pointer.String("build"),
 						Image:           pointer.String("golang:1.17"),
 						ImagePullPolicy: &imagePullPollcy,
-						Command:         []string{"/shell/build.sh"},
+						//Command:         []string{"/bin/bash", "-c", "sleep 3600"},
+						Command: []string{"/shell/build.sh"},
 						VolumeMounts: []client_corev1.VolumeMountApplyConfiguration{
+							// protobuf编译器
+							{
+								Name:      pointer.String("protoc"),
+								MountPath: pointer.String("/bin/protoc"),
+							},
 							// 挂载编译用的脚本
 							{
 								Name:      pointer.String("shell"),
@@ -621,7 +655,7 @@ func getDataCollectionStatefulSetSpec(
 								},
 							},
 							InitialDelaySeconds: pointer.Int32(20),
-							PeriodSeconds:       pointer.Int32(60),
+							PeriodSeconds:       pointer.Int32(20),
 						},
 					},
 				},
