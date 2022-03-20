@@ -4,6 +4,7 @@ package kubecontroller
 import (
 	"fmt"
 	utilApi "gitee.com/moyusir/util/api/util/v1"
+	"github.com/go-kratos/kratos/v2/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -68,6 +69,21 @@ func NewKubeController(namespace string) (*KubeController, error) {
 	return &KubeController{baseKubeController: controller}, nil
 }
 
+// Unregister 清空用户相关的k8s资源
+func (c *KubeController) Unregister(username string) error {
+	labelSelector := "user=" + username
+	types := []string{"Deployment", "StatefulSet", "Service", "ConfigMap"}
+
+	for _, resourceType := range types {
+		err := c.DeleteResources(resourceType, labelSelector)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // CreateConfigMapOfGeneratedCode 为dataCollection与dataProcessing服务生成的代码创建configMap
 func (c *KubeController) CreateConfigMapOfGeneratedCode(username string, dcCode, dpCode map[string]string) (
 	dcCm *corev1.ConfigMap, dpCm *corev1.ConfigMap, err error) {
@@ -86,11 +102,12 @@ func (c *KubeController) CreateConfigMapOfGeneratedCode(username string, dcCode,
 		c.DeleteResource(dcCm.Name, "ConfigMap")
 		return nil, nil, err
 	}
+
 	return
 }
 
 // CreateConfigMapOfStateRegisterInfo 创建保存设备状态注册信息的configMap
-func (c *KubeController) CreateConfigMapOfStateRegisterInfo(username string, info []utilApi.DeviceStateRegisterInfo) (*corev1.ConfigMap, error) {
+func (c *KubeController) CreateConfigMapOfStateRegisterInfo(username string, info []*utilApi.DeviceStateRegisterInfo) (*corev1.ConfigMap, error) {
 	// 保存生成代码的cm统一以<用户名>-state-register-info命名
 	// 并以user:username作为label
 	name := fmt.Sprintf("%s-state-register-info", username)
@@ -114,6 +131,10 @@ func (c *KubeController) CreateConfigMapOfStateRegisterInfo(username string, inf
 
 // DeployDataProcessingService 部署数据处理服务，返回指向应用容器endpoint的service组件的信息，提供给网关注册使用
 func (c *KubeController) DeployDataProcessingService(option *DataProcessingDeployOption) (*corev1.Service, error) {
+	if option == nil {
+		return nil, errors.New(500, "option is nil", "")
+	}
+
 	// deployment以<用户名>-dp命名，以app:<用户名>-dp和user:<username>为label
 	name := fmt.Sprintf("%s-dp", option.Username)
 	label := map[string]string{"app": name, "user": option.Username}
@@ -144,6 +165,10 @@ func (c *KubeController) DeployDataProcessingService(option *DataProcessingDeplo
 
 // DeployDataCollectionService 部署数据收集服务,返回指向应用容器endpoint的service组件的信息，提供给网关注册使用
 func (c *KubeController) DeployDataCollectionService(option *DataCollectionDeployOption) (*corev1.Service, error) {
+	if option == nil {
+		return nil, errors.New(500, "option is nil", "")
+	}
+
 	// statefulSet以<用户名>-dc命名，以app:<<用户名>-dc>,user:<username>为label
 	name := fmt.Sprintf("%s-dc", option.Username)
 	label := map[string]string{"app": name, "user": option.Username}

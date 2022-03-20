@@ -28,8 +28,9 @@ func NewCodeGenerator(dpTmplDir, dcTmplDir string) (*CodeGenerator, error) {
 	}, nil
 }
 
+// GetServiceFiles 生成数据收集服务和数据处理服务的代码
 func (g *CodeGenerator) GetServiceFiles(
-	configInfo []v1.DeviceConfigRegisterInfo, stateInfo []v1.DeviceStateRegisterInfo) (
+	configInfo []*v1.DeviceConfigRegisterInfo, stateInfo []*v1.DeviceStateRegisterInfo) (
 	dc map[string]string, dp map[string]string, err error) {
 	var (
 		configs       = make([]Device, len(configInfo))

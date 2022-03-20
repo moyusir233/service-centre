@@ -2,23 +2,25 @@ package gateway
 
 import (
 	"gitee.com/moyusir/util/kong"
+	"github.com/go-kratos/kratos/v2/errors"
 	corev1 "k8s.io/api/core/v1"
 )
 
 type Manager struct {
 	*kong.Admin
+	AppDomainName string
 }
 
-func NewManager(address string) (*Manager, error) {
+func NewManager(address, appDomainName string) (*Manager, error) {
 	admin, err := kong.NewAdmin(address)
 	if err != nil {
 		return nil, err
 	}
-	return &Manager{Admin: admin}, nil
+	return &Manager{Admin: admin, AppDomainName: appDomainName}, nil
 }
 
-// CreateConsumer 为用户创建在网关中的consumer实体以及相应的api密钥
-func (m *Manager) CreateConsumer(username string) (apiKey string, err error) {
+// CreateConsumerAndKey 为用户创建在网关中的consumer实体以及相应的api密钥
+func (m *Manager) CreateConsumerAndKey(username string) (apiKey string, err error) {
 	consumerCreateOption := &kong.ConsumerCreateOption{
 		Username: username,
 		Tags:     []string{username},
@@ -46,7 +48,10 @@ func (m *Manager) Unregister(username string) error {
 }
 
 // CreateDcServiceRoute 为数据收集服务的service组件创建外部路由
-func (m *Manager) CreateDcServiceRoute(username, appDomainName string, service *corev1.Service) error {
+func (m *Manager) CreateDcServiceRoute(username string, service *corev1.Service) error {
+	if service == nil {
+		return errors.New(500, "service is nil", "")
+	}
 	// 为数据收集服务的grpc连接创建路由
 	// 查询service提供grpc的端口，默认为9000
 	var port int32 = 9000
@@ -77,7 +82,7 @@ func (m *Manager) CreateDcServiceRoute(username, appDomainName string, service *
 	routeCreateOption := &kong.RouteCreateOption{
 		Name:      service.Name,
 		Protocols: []string{"grpc"},
-		Hosts:     []string{appDomainName},
+		Hosts:     []string{m.AppDomainName},
 		Paths:     []string{"/"},
 		Headers: map[string][]string{
 			"X-Service-Type": {username + "-dc"},
@@ -119,7 +124,11 @@ func (m *Manager) CreateDcServiceRoute(username, appDomainName string, service *
 }
 
 // CreateDpServiceRoute 为数据处理服务的service组件创建外部路由
-func (m *Manager) CreateDpServiceRoute(username, appDomainName string, service *corev1.Service) error {
+func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service) error {
+	if service == nil {
+		return errors.New(500, "service is nil", "")
+	}
+
 	// 为数据处理服务的http连接创建路由
 	// 查询service提供http服务的端口，默认为8000
 	var port int32 = 8000
@@ -150,7 +159,7 @@ func (m *Manager) CreateDpServiceRoute(username, appDomainName string, service *
 	routeCreateOption := &kong.RouteCreateOption{
 		Name:      service.Name,
 		Protocols: []string{"http"},
-		Hosts:     []string{appDomainName},
+		Hosts:     []string{m.AppDomainName},
 		Paths:     []string{"/"},
 		Headers: map[string][]string{
 			"X-Service-Type": {username + "-dp"},

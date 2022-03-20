@@ -30,7 +30,7 @@ func TestKubeController_DeployService(t *testing.T) {
 
 	// 测试将生成的代码进行编译和部署
 	// 定义生成代码需要使用的注册信息
-	configInfo := []v1.DeviceConfigRegisterInfo{
+	configInfo := []*v1.DeviceConfigRegisterInfo{
 		{
 			Fields: []*v1.DeviceConfigRegisterInfo_Field{
 				{
@@ -56,7 +56,7 @@ func TestKubeController_DeployService(t *testing.T) {
 			},
 		},
 	}
-	stateInfo := []v1.DeviceStateRegisterInfo{
+	stateInfo := []*v1.DeviceStateRegisterInfo{
 		{
 			Fields: []*v1.DeviceStateRegisterInfo_Field{
 				{
