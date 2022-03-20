@@ -2,42 +2,59 @@ syntax = "proto3";
 
 package api.serviceCentre.v1;
 
+import "google/api/annotations.proto";
+import "util/api/util/v1/general.proto";
+
 option go_package = "gitee.com/moyusir/service-centre/api/serviceCenter/v1;v1";
 option java_multiple_files = true;
 option java_package = "api.gitee.com/moyusir/service-centre.v1";
 
-import "util/api/util/v1/general.proto";
-
 // 提供用户注册、配置注册、设备状态信息注册等相关服务
 service User {
     // 用户注册服务，一次性注册用户信息、配置信息、设备状态信息以及预警规则
-    rpc Register(RegisterRequest)returns (RegisterReply);
+    rpc Register(RegisterRequest) returns (RegisterReply) {
+        option (google.api.http) = {
+            post: "/users"
+            body: "*"
+        };
+    };
     // 用户登录验证
-    rpc Login(LoginRequest)returns (LoginReply);
+    rpc Login(api.util.v1.User) returns (LoginReply) {
+        option (google.api.http) = {
+            get: "/users"
+        };
+    };
+    // 用户注销
+    rpc Unregister(api.util.v1.User) returns (UnregisterReply) {
+        option (google.api.http) = {
+            delete: "/users"
+        };
+    };
 }
 // 注册请求
-message RegisterRequest{
+message RegisterRequest {
     // 用户注册信息
-    api.util.v1.User user=1;
+    api.util.v1.User user = 1;
     // 配置注册信息
     repeated api.util.v1.DeviceConfigRegisterInfo device_config_register_infos = 2;
     // 设备状态及预警规则注册信息
     repeated api.util.v1.DeviceStateRegisterInfo device_state_register_infos = 3;
 }
 // 注册响应
-message RegisterReply{
+message RegisterReply {
     // 表示是否注册成功
-    bool success=1;
+    bool success = 1;
     // 用户的token
-    string token=2;
+    string token = 2;
 }
 
-// 登录请求与相应
-message LoginRequest{
-    // 用户信息
-    api.util.v1.User user = 1;
+// 登录响应
+message LoginReply {
+    bool success = 1;
+    string token = 2;
 }
-message LoginReply{
-    bool success=1;
-    string token=2;
+
+// 注销响应
+message UnregisterReply {
+    bool success = 1;
 }

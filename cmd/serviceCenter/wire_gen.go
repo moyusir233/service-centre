@@ -32,8 +32,7 @@ func initApp(confServer *conf.Server, confService *conf.Service, confData *conf.
 	}
 	userService := service.NewUserService(userUsecase)
 	httpServer := server.NewHTTPServer(confServer, userService, logger)
-	grpcServer := server.NewGRPCServer(confServer, userService, logger)
-	app := newApp(logger, httpServer, grpcServer)
+	app := newApp(logger, httpServer)
 	return app, func() {
 		cleanup()
 	}, nil

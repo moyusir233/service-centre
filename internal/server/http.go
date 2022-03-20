@@ -1,6 +1,7 @@
 package server
 
 import (
+	v1 "gitee.com/moyusir/service-centre/api/serviceCenter/v1"
 	"gitee.com/moyusir/service-centre/internal/conf"
 	"gitee.com/moyusir/service-centre/internal/service"
 	"github.com/go-kratos/kratos/v2/log"
@@ -26,5 +27,6 @@ func NewHTTPServer(c *conf.Server, us *service.UserService, logger log.Logger) *
 	}
 	srv := http.NewServer(opts...)
 
+	v1.RegisterUserHTTPServer(srv, us)
 	return srv
 }

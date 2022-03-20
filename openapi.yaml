@@ -6,6 +6,125 @@ info:
     title: User
     description: 提供用户注册、配置注册、设备状态信息注册等相关服务
     version: 0.0.1
-paths: {}
+paths:
+    /users:
+        get:
+            summary: 用户登录验证
+            operationId: User_Login
+            parameters:
+                - name: id
+                  in: query
+                  description: 用户id
+                  schema:
+                    type: string
+                - name: password
+                  in: query
+                  description: 用户密码
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/LoginReply'
+        post:
+            summary: 用户注册服务，一次性注册用户信息、配置信息、设备状态信息以及预警规则
+            operationId: User_Register
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RegisterRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RegisterReply'
+        delete:
+            summary: 用户注销
+            operationId: User_Unregister
+            parameters:
+                - name: id
+                  in: query
+                  description: 用户id
+                  schema:
+                    type: string
+                - name: password
+                  in: query
+                  description: 用户密码
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UnregisterReply'
 components:
-    schemas: {}
+    schemas:
+        DeviceConfigRegisterInfo:
+            properties:
+                fields:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Field'
+                    description: 单个设备的配置注册信息包含若干配置字段1
+            description: 配置注册信息
+        DeviceStateRegisterInfo:
+            properties:
+                fields:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Field'
+            description: 设备状态注册信息
+        LoginReply:
+            properties:
+                success:
+                    type: boolean
+                token:
+                    type: string
+            description: 登录响应
+        RegisterReply:
+            properties:
+                success:
+                    type: boolean
+                    description: 表示是否注册成功
+                token:
+                    type: string
+                    description: 用户的token
+            description: 注册响应
+        RegisterRequest:
+            properties:
+                user:
+                    $ref: '#/components/schemas/User'
+                device_config_register_infos:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DeviceConfigRegisterInfo'
+                    description: 配置注册信息
+                device_state_register_infos:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DeviceStateRegisterInfo'
+                    description: 设备状态及预警规则注册信息
+            description: 注册请求
+        UnregisterReply:
+            properties:
+                success:
+                    type: boolean
+            description: 注销响应
+        User:
+            properties:
+                id:
+                    type: string
+                    description: 用户id
+                password:
+                    type: string
+                    description: 用户密码
+            description: 用户注册信息

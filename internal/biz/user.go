@@ -74,7 +74,7 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 	defer func() {
 		if err != nil {
 			// 注册失败时，需要清理掉创建的无效资源
-			u.Unregister(username)
+			u.clear(username)
 		}
 	}()
 	// 在网关创建用户对应的consumer，从而创建token
@@ -167,9 +167,22 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 }
 
 // Unregister 注销用户，清理用户相关的资源，包括网关组件、k8s资源以及数据库的记录
-func (u *UserUsecase) Unregister(username string) {
+func (u *UserUsecase) Unregister(username, password string) error {
+	// 确认密码是否正确，确保是用户本人操作的注销
+	_, err := u.repo.Login(username, password)
+	if err != nil {
+		return errors.Forbidden("", "")
+	}
+
+	return u.clear(username)
+}
+
+// 清理用户相关的资源
+func (u *UserUsecase) clear(username string) (err error) {
 	// TODO 错误处理
-	u.repo.UnRegister(username)
-	u.gateway.Unregister(username)
-	u.controller.Unregister(username)
+	err = u.repo.UnRegister(username)
+	err = u.gateway.Unregister(username)
+	err = u.controller.Unregister(username)
+
+	return err
 }
