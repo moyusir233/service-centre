@@ -15,7 +15,7 @@ message Server {
   message HTTP {
     string network = 1;
     string addr = 2;
-    google.protobuf.Duration timeout = 4;
+    google.protobuf.Duration timeout = 3;
   }
   message GRPC {
     string network = 1;
@@ -25,19 +25,19 @@ message Server {
   message Gateway {
     string address = 1;
   }
-  message K8sCluster{
+  message Cluster{
     string namespace=1;
   }
   HTTP http = 1;
   GRPC grpc = 2;
   Gateway gateway = 3;
-  K8sCluster cluster = 4;
+  Cluster cluster = 4;
   string app_domain_name=5;
 }
 
 message Service{
   message CodeGenerator{
-    // 服务相应模板文件所在的文件目录，是相对于渲染模板代码文件的相对路径
+    // 服务相应模板文件所在的文件目录，填写绝对路径
     string data_collection_tmpl_root=1;
     string data_processing_tmpl_root=2;
   }

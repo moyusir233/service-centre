@@ -2,17 +2,18 @@ server:
   http:
     addr: 0.0.0.0:8000
     timeout: 60s
-    port: 8000
   grpc:
     addr: 0.0.0.0:9000
     timeout: 60s
   gateway:
     address: http://kong.test.svc.cluster.local:8001
-    routeTimeout: 20s
+  cluster:
+    namespace: test
+  appDomainName: gd-k8s-master01
 service:
   codeGenerator:
-    dataCollectionTmplRoot: data-colletion-template
-    dataProcessingTmplRoot: data-processing-template
+    dataCollectionTmplRoot: /app/service-centre/internal/biz/codegenerator/data-processing-template
+    dataProcessingTmplRoot: /app/service-centre/internal/biz/codegenerator/data-processing-template
 data:
   redis:
     host: test-redis.test.svc.cluster.local
