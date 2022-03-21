@@ -82,7 +82,9 @@ func (r *RedisRepo) UnRegister(username string) error {
 
 		// 获得然后删除和用户相关的键，包括设备配置信息、状态信息、警告信息等
 		keys := p.Keys(context.Background(), username+"*").Val()
-		p.Del(context.Background(), keys...)
+		if len(keys) != 0 {
+			p.Del(context.Background(), keys...)
+		}
 
 		return nil
 	})
