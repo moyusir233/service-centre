@@ -7,8 +7,7 @@ import "google/protobuf/duration.proto";
 
 message Bootstrap {
   Server server = 1;
-  Service service = 2;
-  Data data = 3;
+  Data data = 2;
 }
 
 message Server {
@@ -28,20 +27,16 @@ message Server {
   message Cluster{
     string namespace=1;
   }
+  message CompilationCenter{
+    string address=1;
+  }
+
   HTTP http = 1;
   GRPC grpc = 2;
   Gateway gateway = 3;
   Cluster cluster = 4;
-  string app_domain_name=5;
-}
-
-message Service{
-  message CodeGenerator{
-    // 服务相应模板文件所在的文件目录，填写绝对路径
-    string data_collection_tmpl_root=1;
-    string data_processing_tmpl_root=2;
-  }
-  CodeGenerator code_generator = 1;
+  CompilationCenter compilation_center = 5;
+  string app_domain_name=6;
 }
 
 message Data {

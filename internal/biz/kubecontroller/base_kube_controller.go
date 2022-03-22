@@ -40,11 +40,13 @@ func newBaseKubeController(namespace string) (*baseKubeController, error) {
 }
 
 // CreateConfigMap 创建指定的configMap
-func (c *baseKubeController) CreateConfigMap(name string, labels map[string]string, data map[string]string) (
+func (c *baseKubeController) CreateConfigMap(
+	name string, labels map[string]string,
+	data map[string]string, binaryData map[string][]byte) (
 	*corev1.ConfigMap, error) {
 	// 创建configMap的apply配置
 	configMapApplyConfiguration := client_corev1.ConfigMap(name, c.namespace).
-		WithLabels(labels).WithData(data)
+		WithLabels(labels).WithData(data).WithBinaryData(binaryData)
 
 	return c.client.CoreV1().ConfigMaps(c.namespace).Apply(
 		context.Background(),

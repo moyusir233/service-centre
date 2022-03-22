@@ -9,11 +9,9 @@ server:
     address: http://kong.test.svc.cluster.local:8001
   cluster:
     namespace: test
+  compilationCenter:
+    address: compilation-center.test.svc.cluster.local:9000
   appDomainName: gd-k8s-master01
-service:
-  codeGenerator:
-    dataCollectionTmplRoot: /app/service-centre/internal/biz/codegenerator/data-processing-template
-    dataProcessingTmplRoot: /app/service-centre/internal/biz/codegenerator/data-processing-template
 data:
   redis:
     host: test-redis.test.svc.cluster.local

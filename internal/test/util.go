@@ -38,7 +38,7 @@ func StartServiceCenterServer(t *testing.T) v1.UserHTTPClient {
 		t.Fatal(err)
 	}
 
-	app, cleanUp, err := initApp(bootstrap.Server, bootstrap.Service, bootstrap.Data, log.NewStdLogger(os.Stdout))
+	app, cleanUp, err := initApp(bootstrap.Server, bootstrap.Data, log.NewStdLogger(os.Stdout))
 	if err != nil {
 		t.Fatal(err)
 	}

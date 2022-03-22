@@ -3,7 +3,7 @@ package kubecontroller
 
 import (
 	"fmt"
-	utilApi "gitee.com/moyusir/util/api/util/v1"
+	v1 "gitee.com/moyusir/util/api/util/v1"
 	"github.com/go-kratos/kratos/v2/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -28,34 +28,22 @@ type BaseDeployOption struct {
 	// 超时时长
 	Timeout time.Duration
 
-	// 服务编译时配置
-	// 项目代码文件的仓库地址
-	ProjectRepoAddress string
-	// 需要拉取的分支名字
-	ProjectBranch string
-	// 项目目录名称
-	ProjectDir string
-	// 相对于项目根目录的，存放项目protobuf服务定义文件的目录的相对路径
-	ProjectApiDir string
-	// 相对于项目根目录的，存放项目service层源代码的目录的相对路径
-	ProjectServiceDir string
-
 	// 服务运行时配置
 	// 运行服务使用的镜像
 	Image string
+	// 运行服务的可执行程序对应的cm
+	Exe *corev1.ConfigMap
+	// 对应服务所需的可执行程序的数据在cm data中的key
+	ExeItemKey string
 }
 type DataProcessingDeployOption struct {
 	BaseDeployOption
-	// 生成的代码对应的cm
-	Code *corev1.ConfigMap
 	// 设备状态注册信息对应的cm
 	RegisterInfo *corev1.ConfigMap
 }
 
 type DataCollectionDeployOption struct {
 	BaseDeployOption
-	// 生成的代码对应的cm
-	Code *corev1.ConfigMap
 	// 项目部署时使用的域名，用于路由匹配
 	AppDomainName string
 }
@@ -84,49 +72,27 @@ func (c *KubeController) Unregister(username string) error {
 	return nil
 }
 
-// CreateConfigMapOfGeneratedCode 为dataCollection与dataProcessing服务生成的代码创建configMap
-func (c *KubeController) CreateConfigMapOfGeneratedCode(username string, dcCode, dpCode map[string]string) (
-	dcCm *corev1.ConfigMap, dpCm *corev1.ConfigMap, err error) {
-	// 保存生成代码的cm统一以<用户名>-<服务名简写,dc或dp>-code命名
-	// 并以user:username作为label
-	dcName := fmt.Sprintf("%s-%s-code", username, "dc")
-	dpName := fmt.Sprintf("%s-%s-code", username, "dp")
+// CreateConfigMapOfExe 创建可执行程序对应的cm，将二进制数据保存进cm中
+func (c *KubeController) CreateConfigMapOfExe(username string, exe map[string][]byte) (
+	*corev1.ConfigMap, error) {
+	// 以user:username为label,以username-exe为名称创建cm
 	label := map[string]string{"user": username}
-
-	dcCm, err = c.CreateConfigMap(dcName, label, dcCode)
-	if err != nil {
-		return nil, nil, err
-	}
-	dpCm, err = c.CreateConfigMap(dpName, label, dpCode)
-	if err != nil {
-		c.DeleteResource(dcCm.Name, "ConfigMap")
-		return nil, nil, err
-	}
-
-	return
+	return c.CreateConfigMap(username+"-exe", label, nil, exe)
 }
 
-// CreateConfigMapOfStateRegisterInfo 创建保存设备状态注册信息的configMap
-func (c *KubeController) CreateConfigMapOfStateRegisterInfo(username string, info []*utilApi.DeviceStateRegisterInfo) (*corev1.ConfigMap, error) {
-	// 保存生成代码的cm统一以<用户名>-state-register-info命名
-	// 并以user:username作为label
-	name := fmt.Sprintf("%s-state-register-info", username)
-	label := map[string]string{"user": username}
-
-	// 注册信息以json形式保存
+func (c *KubeController) CreateConfigMapOfStateRegisterInfo(
+	username string, info []*v1.DeviceStateRegisterInfo) (*corev1.ConfigMap, error) {
+	// 以user:username为label,username-state-register-info为名称创建cm
+	// 保存注册信息的json数据
 	marshal, err := json.Marshal(info)
 	if err != nil {
 		return nil, err
 	}
 
-	// 数据处理服务会读取配置文件夹下名为register_info.json的文件获得注册信息，
-	// 因此此处以register_info.json作为cm data的键名
-	configMap, err := c.CreateConfigMap(name, label, map[string]string{"register_info.json": string(marshal)})
-	if err != nil {
-		return nil, err
-	}
-
-	return configMap, nil
+	label := map[string]string{"user": username}
+	return c.CreateConfigMap(username+"-state-register-info", label, map[string]string{
+		"register_info.json": string(marshal),
+	}, nil)
 }
 
 // DeployDataProcessingService 部署数据处理服务，返回指向应用容器endpoint的service组件的信息，提供给网关注册使用
@@ -215,10 +181,9 @@ func (c *KubeController) DeployDataCollectionService(option *DataCollectionDeplo
 func getDataProcessingDeploymentSpec(name string, label map[string]string, option *DataProcessingDeployOption) *client_appsv1.DeploymentSpecApplyConfiguration {
 	// 配置部署选项
 	var (
-		imagePullPollcy = corev1.PullIfNotPresent
-		restartPollcy   = corev1.RestartPolicyAlways
+		imagePullPolicy = corev1.PullIfNotPresent
+		restartPolicy   = corev1.RestartPolicyAlways
 		servicePort     = intstr.FromInt(8000)
-		hostPathType    = corev1.HostPathFile
 	)
 
 	return &client_appsv1.DeploymentSpecApplyConfiguration{
@@ -238,62 +203,21 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 			Spec: &client_corev1.PodSpecApplyConfiguration{
 				// 配置需要挂载的volume
 				Volumes: []client_corev1.VolumeApplyConfiguration{
-					// protobuf编译器
 					{
-						Name: pointer.String("protoc"),
-						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
-							HostPath: &client_corev1.HostPathVolumeSourceApplyConfiguration{
-								Path: pointer.String("/root/k8s-install/protobuf/protoc"),
-								Type: &hostPathType,
-							},
-						},
-					},
-					{
-						// 存放编译脚本build.sh的volume
-						Name: pointer.String("shell"),
+						// 存放编译得到的二进制程序
+						Name: pointer.String("app"),
 						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
 							ConfigMap: &client_corev1.ConfigMapVolumeSourceApplyConfiguration{
 								LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
-									Name: pointer.String("shell"),
+									Name: pointer.String(option.Exe.Name),
 								},
 								Items: []client_corev1.KeyToPathApplyConfiguration{
 									{
-										Key:  pointer.String("build.sh"),
-										Path: pointer.String("build.sh"),
+										Key:  pointer.String(option.ExeItemKey),
+										Path: pointer.String("server"),
 									},
 								},
 								DefaultMode: pointer.Int32(0777),
-							},
-						},
-					},
-					{
-						// 存放拉取代码密钥的volume
-						Name: pointer.String("key"),
-						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
-							ConfigMap: &client_corev1.ConfigMapVolumeSourceApplyConfiguration{
-								LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
-									Name: pointer.String("key"),
-								},
-								// ssh密钥的文件权限级别须为0600
-								DefaultMode: pointer.Int32(0600),
-							},
-						},
-					},
-					{
-						// 存放编译得到的二进制可执行程序的中转目录
-						Name: pointer.String("tmp"),
-						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
-							EmptyDir: client_corev1.EmptyDirVolumeSource(),
-						},
-					},
-					{
-						// 存放业务生成代码的volume
-						Name: pointer.String("generated-code"),
-						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
-							ConfigMap: &client_corev1.ConfigMapVolumeSourceApplyConfiguration{
-								LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
-									Name: &option.Code.Name,
-								},
 							},
 						},
 					},
@@ -331,75 +255,15 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 						},
 					},
 				},
-				// 用于执行编译的initContainer
-				InitContainers: []client_corev1.ContainerApplyConfiguration{
-					{
-						Name:            pointer.String("build"),
-						Image:           pointer.String("golang:1.17"),
-						ImagePullPolicy: &imagePullPollcy,
-						//Command:         []string{"/bin/bash", "-c", "sleep 3600"},
-						Command: []string{"/shell/build.sh"},
-						VolumeMounts: []client_corev1.VolumeMountApplyConfiguration{
-							// protobuf编译器
-							{
-								Name:      pointer.String("protoc"),
-								MountPath: pointer.String("/bin/protoc"),
-							},
-							// 挂载编译用的脚本
-							{
-								Name:      pointer.String("shell"),
-								MountPath: pointer.String("/shell"),
-							},
-							// 挂载拉取代码使用的公钥
-							{
-								Name:      pointer.String("key"),
-								MountPath: pointer.String("/root/.ssh"),
-							},
-							// 挂载放置编译后得到的二进制可执行程序的共享目录
-							{
-								Name:      pointer.String("tmp"),
-								MountPath: pointer.String("/app"),
-							},
-							// 挂载由服务中心生成的代码
-							{
-								Name:      pointer.String("generated-code"),
-								MountPath: pointer.String("/generated-code"),
-							},
-						},
-						// 编译所需的环境变量
-						Env: []client_corev1.EnvVarApplyConfiguration{
-							{
-								Name:  pointer.String("PROJECT_REPO_ADDRESS"),
-								Value: &option.ProjectRepoAddress,
-							},
-							{
-								Name:  pointer.String("PROJECT_BRANCH"),
-								Value: &option.ProjectBranch,
-							},
-							{
-								Name:  pointer.String("PROJECT_DIR"),
-								Value: &option.ProjectDir,
-							},
-							{
-								Name:  pointer.String("PROJECT_API_DIR"),
-								Value: &option.ProjectApiDir,
-							},
-							{
-								Name:  pointer.String("PROJECT_SERVICE_DIR"),
-								Value: &option.ProjectServiceDir,
-							},
-						},
-					},
-				},
 				Containers: []client_corev1.ContainerApplyConfiguration{
 					{
 						Name:            &name,
 						Image:           &option.Image,
-						ImagePullPolicy: &imagePullPollcy,
+						ImagePullPolicy: &imagePullPolicy,
 						VolumeMounts: []client_corev1.VolumeMountApplyConfiguration{
 							// 挂载放置编译后得到的二进制可执行程序的共享目录
 							{
-								Name:      pointer.String("tmp"),
+								Name:      pointer.String("app"),
 								MountPath: pointer.String("/app"),
 							},
 							// 挂载应用运行所需的配置文件目录
@@ -439,7 +303,7 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 						},
 					},
 				},
-				RestartPolicy: &restartPollcy,
+				RestartPolicy: &restartPolicy,
 			},
 		},
 	}
@@ -452,10 +316,9 @@ func getDataCollectionStatefulSetSpec(
 	option *DataCollectionDeployOption) *client_appsv1.StatefulSetSpecApplyConfiguration {
 	// 配置部署选项
 	var (
-		imagePullPollcy = corev1.PullIfNotPresent
-		restartPollcy   = corev1.RestartPolicyAlways
+		imagePullPolicy = corev1.PullIfNotPresent
+		restartPolicy   = corev1.RestartPolicyAlways
 		servicePort     = intstr.FromInt(8000)
-		hostPathType    = corev1.HostPathFile
 	)
 
 	return &client_appsv1.StatefulSetSpecApplyConfiguration{
@@ -475,28 +338,18 @@ func getDataCollectionStatefulSetSpec(
 			Spec: &client_corev1.PodSpecApplyConfiguration{
 				// 配置需要挂载的volume
 				Volumes: []client_corev1.VolumeApplyConfiguration{
-					// protobuf编译器
 					{
-						Name: pointer.String("protoc"),
-						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
-							HostPath: &client_corev1.HostPathVolumeSourceApplyConfiguration{
-								Path: pointer.String("/root/k8s-install/protobuf/protoc"),
-								Type: &hostPathType,
-							},
-						},
-					},
-					{
-						// 存放编译脚本build.sh的volume
-						Name: pointer.String("shell"),
+						// 存放编译得到的二进制程序
+						Name: pointer.String("app"),
 						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
 							ConfigMap: &client_corev1.ConfigMapVolumeSourceApplyConfiguration{
 								LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
-									Name: pointer.String("shell"),
+									Name: pointer.String(option.Exe.Name),
 								},
 								Items: []client_corev1.KeyToPathApplyConfiguration{
 									{
-										Key:  pointer.String("build.sh"),
-										Path: pointer.String("build.sh"),
+										Key:  pointer.String(option.ExeItemKey),
+										Path: pointer.String("server"),
 									},
 								},
 								DefaultMode: pointer.Int32(0777),
@@ -504,41 +357,9 @@ func getDataCollectionStatefulSetSpec(
 						},
 					},
 					{
-						// 存放拉取代码密钥的volume
-						Name: pointer.String("key"),
-						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
-							ConfigMap: &client_corev1.ConfigMapVolumeSourceApplyConfiguration{
-								LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
-									Name: pointer.String("key"),
-								},
-								// ssh密钥的文件权限级别须为0600
-								DefaultMode: pointer.Int32(0600),
-							},
-						},
-					},
-					{
-						// 存放编译得到的二进制可执行程序的中转目录
-						Name: pointer.String("tmp"),
-						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
-							EmptyDir: client_corev1.EmptyDirVolumeSource(),
-						},
-					},
-					{
-						// 存放业务生成代码的volume
-						Name: pointer.String("generated-code"),
-						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
-							ConfigMap: &client_corev1.ConfigMapVolumeSourceApplyConfiguration{
-								LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
-									Name: &option.Code.Name,
-								},
-							},
-						},
-					},
-					{
 						// dataCollection服务运行所需的配置文件volume，包括通用配置
 						Name: pointer.String("config"),
 						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
-							// 合并通用配置和用户注册信息的configMap到一个目录下进行挂载
 							// 通用配置
 							ConfigMap: &client_corev1.ConfigMapVolumeSourceApplyConfiguration{
 								LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
@@ -554,75 +375,15 @@ func getDataCollectionStatefulSetSpec(
 						},
 					},
 				},
-				// 用于执行编译的initContainer
-				InitContainers: []client_corev1.ContainerApplyConfiguration{
-					{
-						Name:            pointer.String("build"),
-						Image:           pointer.String("golang:1.17"),
-						ImagePullPolicy: &imagePullPollcy,
-						//Command:         []string{"/bin/bash", "-c", "sleep 3600"},
-						Command: []string{"/shell/build.sh"},
-						VolumeMounts: []client_corev1.VolumeMountApplyConfiguration{
-							// protobuf编译器
-							{
-								Name:      pointer.String("protoc"),
-								MountPath: pointer.String("/bin/protoc"),
-							},
-							// 挂载编译用的脚本
-							{
-								Name:      pointer.String("shell"),
-								MountPath: pointer.String("/shell"),
-							},
-							// 挂载拉取代码使用的公钥
-							{
-								Name:      pointer.String("key"),
-								MountPath: pointer.String("/root/.ssh"),
-							},
-							// 挂载放置编译后得到的二进制可执行程序的共享目录
-							{
-								Name:      pointer.String("tmp"),
-								MountPath: pointer.String("/app"),
-							},
-							// 挂载由服务中心生成的代码
-							{
-								Name:      pointer.String("generated-code"),
-								MountPath: pointer.String("/generated-code"),
-							},
-						},
-						// 编译所需的环境变量
-						Env: []client_corev1.EnvVarApplyConfiguration{
-							{
-								Name:  pointer.String("PROJECT_REPO_ADDRESS"),
-								Value: &option.ProjectRepoAddress,
-							},
-							{
-								Name:  pointer.String("PROJECT_BRANCH"),
-								Value: &option.ProjectBranch,
-							},
-							{
-								Name:  pointer.String("PROJECT_DIR"),
-								Value: &option.ProjectDir,
-							},
-							{
-								Name:  pointer.String("PROJECT_API_DIR"),
-								Value: &option.ProjectApiDir,
-							},
-							{
-								Name:  pointer.String("PROJECT_SERVICE_DIR"),
-								Value: &option.ProjectServiceDir,
-							},
-						},
-					},
-				},
 				Containers: []client_corev1.ContainerApplyConfiguration{
 					{
 						Name:            &name,
 						Image:           &option.Image,
-						ImagePullPolicy: &imagePullPollcy,
+						ImagePullPolicy: &imagePullPolicy,
 						VolumeMounts: []client_corev1.VolumeMountApplyConfiguration{
 							// 挂载放置编译后得到的二进制可执行程序的共享目录
 							{
-								Name:      pointer.String("tmp"),
+								Name:      pointer.String("app"),
 								MountPath: pointer.String("/app"),
 							},
 							// 挂载应用运行所需的配置文件目录
@@ -684,7 +445,7 @@ func getDataCollectionStatefulSetSpec(
 						},
 					},
 				},
-				RestartPolicy: &restartPollcy,
+				RestartPolicy: &restartPolicy,
 			},
 		},
 		// 使用的无头服务名

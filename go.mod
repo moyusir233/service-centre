@@ -3,16 +3,17 @@ module gitee.com/moyusir/service-centre
 go 1.17
 
 require (
+	gitee.com/moyusir/compilation-center v0.1.1
 	gitee.com/moyusir/util v0.1.4
-	github.com/go-kratos/kratos/v2 v2.1.5
+	github.com/go-kratos/kratos/v2 v2.2.1
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/golang/protobuf v1.5.2
 	github.com/google/wire v0.5.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/imroc/req/v3 v3.7.6
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/genproto v0.0.0-20211223182754-3ac035c7e7cb
-	google.golang.org/grpc v1.43.0
+	google.golang.org/genproto v0.0.0-20220126215142-9970aeb2e350
+	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.27.1
 	k8s.io/api v0.22.6
 	k8s.io/apimachinery v0.22.6
@@ -24,7 +25,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-logr/logr v1.2.1 // indirect
 	github.com/go-playground/form/v4 v4.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
