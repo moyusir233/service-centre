@@ -21,8 +21,6 @@ cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiy
 cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0ZeosJ0Rtdos=
 cloud.google.com/go/storage v1.6.0/go.mod h1:N7U0C8pVQ/+NIKOBQyamJIeKQKkZ+mxpohlUTyfDhBk=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-gitee.com/moyusir/compilation-center v0.1.1 h1:e20AFgsn7kuMzMd3NjzdAOn8s5dHkxYhskJlLE/BhwU=
-gitee.com/moyusir/compilation-center v0.1.1/go.mod h1:z09IaQgh8mdmJkqbzdSvB15hBGFeOD/npuYYY8RHyWg=
 gitee.com/moyusir/util v0.1.4 h1:ErHZiv00bdcwd3mGdOj/o3IlaRDQBFAn0HB8i8TZ5ys=
 gitee.com/moyusir/util v0.1.4/go.mod h1:pYt/MqSAcfsmbsOlnpicqM75VjPiR/WljVxCwtF5iv4=
 github.com/Azure/go-autorest v14.2.0+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=

@@ -28,18 +28,19 @@ type BaseDeployOption struct {
 	// 超时时长
 	Timeout time.Duration
 
+	// 服务向编译中心发出请求时需要的配置
+
+	// 编译中心的地址
+	CompilationCenterAddress string
+	// 以json形式保存用户注册信息的cm，其中状态信息以state.json为键，配置信息以config.json为键
+	RegisterInfo *corev1.ConfigMap
+
 	// 服务运行时配置
 	// 运行服务使用的镜像
 	Image string
-	// 运行服务的可执行程序对应的cm
-	Exe *corev1.ConfigMap
-	// 对应服务所需的可执行程序的数据在cm data中的key
-	ExeItemKey string
 }
 type DataProcessingDeployOption struct {
 	BaseDeployOption
-	// 设备状态注册信息对应的cm
-	RegisterInfo *corev1.ConfigMap
 }
 
 type DataCollectionDeployOption struct {
@@ -72,26 +73,24 @@ func (c *KubeController) Unregister(username string) error {
 	return nil
 }
 
-// CreateConfigMapOfExe 创建可执行程序对应的cm，将二进制数据保存进cm中
-func (c *KubeController) CreateConfigMapOfExe(username string, exe map[string][]byte) (
-	*corev1.ConfigMap, error) {
-	// 以user:username为label,以username-exe为名称创建cm
-	label := map[string]string{"user": username}
-	return c.CreateConfigMap(username+"-exe", label, nil, exe)
-}
-
-func (c *KubeController) CreateConfigMapOfStateRegisterInfo(
-	username string, info []*v1.DeviceStateRegisterInfo) (*corev1.ConfigMap, error) {
+func (c *KubeController) CreateConfigMapOfRegisterInfo(
+	username string,
+	states []*v1.DeviceStateRegisterInfo, configs []*v1.DeviceConfigRegisterInfo) (*corev1.ConfigMap, error) {
 	// 以user:username为label,username-state-register-info为名称创建cm
 	// 保存注册信息的json数据
-	marshal, err := json.Marshal(info)
+	stateJson, err := json.Marshal(states)
+	if err != nil {
+		return nil, err
+	}
+	configJson, err := json.Marshal(configs)
 	if err != nil {
 		return nil, err
 	}
 
 	label := map[string]string{"user": username}
-	return c.CreateConfigMap(username+"-state-register-info", label, map[string]string{
-		"register_info.json": string(marshal),
+	return c.CreateConfigMap(username+"-register-info", label, map[string]string{
+		"state.json":  string(stateJson),
+		"config.json": string(configJson),
 	}, nil)
 }
 
@@ -204,20 +203,20 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 				// 配置需要挂载的volume
 				Volumes: []client_corev1.VolumeApplyConfiguration{
 					{
-						// 存放编译得到的二进制程序
+						// 存放编译得到的二进制程序的中转目录
 						Name: pointer.String("app"),
+						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
+							EmptyDir: &client_corev1.EmptyDirVolumeSourceApplyConfiguration{},
+						},
+					},
+					{
+						// 存放用户注册信息的cm，用于向编译中心发起编译请求
+						Name: pointer.String("register-info"),
 						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
 							ConfigMap: &client_corev1.ConfigMapVolumeSourceApplyConfiguration{
 								LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
-									Name: pointer.String(option.Exe.Name),
+									Name: &option.RegisterInfo.Name,
 								},
-								Items: []client_corev1.KeyToPathApplyConfiguration{
-									{
-										Key:  pointer.String(option.ExeItemKey),
-										Path: pointer.String("server"),
-									},
-								},
-								DefaultMode: pointer.Int32(0777),
 							},
 						},
 					},
@@ -248,9 +247,42 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 											LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
 												Name: &option.RegisterInfo.Name,
 											},
+											Items: []client_corev1.KeyToPathApplyConfiguration{
+												{
+													Key:  pointer.String("state.json"),
+													Path: pointer.String("register_info.json"),
+												},
+											},
 										},
 									},
 								},
+							},
+						},
+					},
+				},
+				InitContainers: []client_corev1.ContainerApplyConfiguration{
+					// 负责向编译中心发出编译请求，获得二进制可执行程序的initContainer
+					{
+						Name:  pointer.String("build"),
+						Image: pointer.String("moyusir233/graduation-design:compilation-client"),
+						Args: []string{
+							"-u", option.Username,
+							"-address", option.CompilationCenterAddress,
+							"-state", "/etc/register-info/state.json",
+							"-config", "/etc/register-info/config.json",
+							"-service_type", "dp",
+							"-o", "/app/server",
+						},
+						VolumeMounts: []client_corev1.VolumeMountApplyConfiguration{
+							{
+								// 用户注册信息
+								Name:      pointer.String("register-info"),
+								MountPath: pointer.String("/etc/register-info"),
+							},
+							{
+								// 存放二进制文件的中转目录
+								Name:      pointer.String("app"),
+								MountPath: pointer.String("/app"),
 							},
 						},
 					},
@@ -339,20 +371,20 @@ func getDataCollectionStatefulSetSpec(
 				// 配置需要挂载的volume
 				Volumes: []client_corev1.VolumeApplyConfiguration{
 					{
-						// 存放编译得到的二进制程序
+						// 存放编译得到的二进制程序的中转目录
 						Name: pointer.String("app"),
+						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
+							EmptyDir: &client_corev1.EmptyDirVolumeSourceApplyConfiguration{},
+						},
+					},
+					{
+						// 存放用户注册信息的cm，用于向编译中心发起编译请求
+						Name: pointer.String("register-info"),
 						VolumeSourceApplyConfiguration: client_corev1.VolumeSourceApplyConfiguration{
 							ConfigMap: &client_corev1.ConfigMapVolumeSourceApplyConfiguration{
 								LocalObjectReferenceApplyConfiguration: client_corev1.LocalObjectReferenceApplyConfiguration{
-									Name: pointer.String(option.Exe.Name),
+									Name: &option.RegisterInfo.Name,
 								},
-								Items: []client_corev1.KeyToPathApplyConfiguration{
-									{
-										Key:  pointer.String(option.ExeItemKey),
-										Path: pointer.String("server"),
-									},
-								},
-								DefaultMode: pointer.Int32(0777),
 							},
 						},
 					},
@@ -371,6 +403,33 @@ func getDataCollectionStatefulSetSpec(
 										Path: pointer.String("config.yaml"),
 									},
 								},
+							},
+						},
+					},
+				},
+				InitContainers: []client_corev1.ContainerApplyConfiguration{
+					// 负责向编译中心发出编译请求，获得二进制可执行程序的initContainer
+					{
+						Name:  pointer.String("build"),
+						Image: pointer.String("moyusir233/graduation-design:compilation-client"),
+						Args: []string{
+							"-u", option.Username,
+							"-address", option.CompilationCenterAddress,
+							"-state", "/etc/register-info/state.json",
+							"-config", "/etc/register-info/config.json",
+							"-service_type", "dc",
+							"-o", "/app/server",
+						},
+						VolumeMounts: []client_corev1.VolumeMountApplyConfiguration{
+							{
+								// 用户注册信息
+								Name:      pointer.String("register-info"),
+								MountPath: pointer.String("/etc/register-info"),
+							},
+							{
+								// 存放二进制文件的中转目录
+								Name:      pointer.String("app"),
+								MountPath: pointer.String("/app"),
 							},
 						},
 					},

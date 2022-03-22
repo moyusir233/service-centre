@@ -1,27 +1,23 @@
 package biz
 
 import (
-	"bytes"
-	"context"
-	compileApi "gitee.com/moyusir/compilation-center/api/compilationCenter/v1"
 	v1 "gitee.com/moyusir/service-centre/api/serviceCenter/v1"
 	"gitee.com/moyusir/service-centre/internal/biz/gateway"
 	"gitee.com/moyusir/service-centre/internal/biz/kubecontroller"
 	"gitee.com/moyusir/service-centre/internal/conf"
 	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	"time"
 )
 
 type UserUsecase struct {
-	repo       UserRepo
-	controller *kubecontroller.KubeController
-	gateway    *gateway.Manager
-	client     compileApi.BuildClient
-	logger     *log.Helper
+	repo                     UserRepo
+	controller               *kubecontroller.KubeController
+	gateway                  *gateway.Manager
+	compilationCenterAddress string
+	logger                   *log.Helper
 }
 type UserRepo interface {
 	// Login 用户登录
@@ -32,30 +28,24 @@ type UserRepo interface {
 	UnRegister(username string) error
 }
 
-func NewUserUsecase(server *conf.Server, repo UserRepo, logger log.Logger) (*UserUsecase, func(), error) {
+func NewUserUsecase(server *conf.Server, repo UserRepo, logger log.Logger) (*UserUsecase, error) {
 	controller, err := kubecontroller.NewKubeController(server.Cluster.Namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	manager, err := gateway.NewManager(server.Gateway.Address, server.AppDomainName)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	conn, err := grpc.DialInsecure(context.Background(), grpc.WithEndpoint(server.CompilationCenter.Address))
-	if err != nil {
-		return nil, nil, err
-	}
-	client := compileApi.NewBuildClient(conn)
 
 	return &UserUsecase{
-		repo:       repo,
-		controller: controller,
-		gateway:    manager,
-		client:     client,
-		logger:     log.NewHelper(logger),
-	}, func() { conn.Close() }, nil
+		repo:                     repo,
+		controller:               controller,
+		gateway:                  manager,
+		compilationCenterAddress: server.CompilationCenter.Address,
+		logger:                   log.NewHelper(logger),
+	}, nil
 }
 
 func (u *UserUsecase) Login(username, password string) (token string, err error) {
@@ -90,46 +80,10 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 		return "", err
 	}
 
-	// 调用编译中心的grpc编译服务，获得传输可执行程序二进制信息的grpc流，并读取二进制信息
-	stream, err := u.client.GetServiceProgram(context.Background(), &compileApi.BuildRequest{
-		Username:                  username,
-		DeviceStateRegisterInfos:  request.DeviceStateRegisterInfos,
-		DeviceConfigRegisterInfos: request.DeviceConfigRegisterInfos,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	// 读取流中的二进制数据
-	dcExe := bytes.NewBuffer(make([]byte, 0, 1024))
-	dpExe := bytes.NewBuffer(make([]byte, 0, 1024))
-
-	for {
-		reply, err := stream.Recv()
-		if err != nil {
-			break
-		}
-		if len(reply.DcExe) > 0 {
-			dcExe.Write(reply.DcExe)
-		}
-		if len(reply.DpExe) > 0 {
-			dpExe.Write(reply.DpExe)
-		}
-	}
-
 	// 为用户创建服务运行所需的k8s资源
-
-	// 创建可执行程序对应的configMap
-	configMapOfExe, err := u.controller.CreateConfigMapOfExe(username, map[string][]byte{
-		"dc": dcExe.Bytes(),
-		"dp": dpExe.Bytes(),
-	})
-	if err != nil {
-		return "", err
-	}
-
-	// 创建用户设备状态注册信息对应的configMap
-	registerInfo, err := u.controller.CreateConfigMapOfStateRegisterInfo(username, request.DeviceStateRegisterInfos)
+	// 创建用户注册信息对应的configMap，用于初始容器向编译中心发起编译请求使用
+	registerInfo, err := u.controller.CreateConfigMapOfRegisterInfo(
+		username, request.DeviceStateRegisterInfos, request.DeviceConfigRegisterInfos)
 	if err != nil {
 		return "", err
 	}
@@ -140,12 +94,12 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 	eg.Go(func() error {
 		dcService, err = u.controller.DeployDataCollectionService(&kubecontroller.DataCollectionDeployOption{
 			BaseDeployOption: kubecontroller.BaseDeployOption{
-				Username:   username,
-				Replica:    2,
-				Timeout:    5 * time.Minute,
-				Image:      "moyusir233/graduation-design:data-collection",
-				Exe:        configMapOfExe,
-				ExeItemKey: "dc",
+				Username:                 username,
+				Replica:                  3,
+				Timeout:                  5 * time.Minute,
+				CompilationCenterAddress: u.compilationCenterAddress,
+				RegisterInfo:             registerInfo,
+				Image:                    "moyusir233/graduation-design:data-collection",
 			},
 			AppDomainName: u.gateway.AppDomainName,
 		})
@@ -154,14 +108,13 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 	eg.Go(func() error {
 		dpService, err = u.controller.DeployDataProcessingService(&kubecontroller.DataProcessingDeployOption{
 			BaseDeployOption: kubecontroller.BaseDeployOption{
-				Username:   username,
-				Replica:    1,
-				Timeout:    5 * time.Minute,
-				Image:      "moyusir233/graduation-design:data-processing",
-				Exe:        configMapOfExe,
-				ExeItemKey: "dp",
+				Username:                 username,
+				Replica:                  1,
+				Timeout:                  5 * time.Minute,
+				CompilationCenterAddress: u.compilationCenterAddress,
+				RegisterInfo:             registerInfo,
+				Image:                    "moyusir233/graduation-design:data-processing",
 			},
-			RegisterInfo: registerInfo,
 		})
 		return err
 	})

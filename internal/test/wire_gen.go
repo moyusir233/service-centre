@@ -25,7 +25,7 @@ func initApp(confServer *conf.Server, confData *conf.Data, logger log.Logger) (*
 		return nil, nil, err
 	}
 	userRepo := data.NewRedisRepo(dataData, logger)
-	userUsecase, cleanup2, err := biz.NewUserUsecase(confServer, userRepo, logger)
+	userUsecase, err := biz.NewUserUsecase(confServer, userRepo, logger)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -34,7 +34,6 @@ func initApp(confServer *conf.Server, confData *conf.Data, logger log.Logger) (*
 	httpServer := server.NewHTTPServer(confServer, userService, logger)
 	app := newApp(logger, httpServer)
 	return app, func() {
-		cleanup2()
 		cleanup()
 	}, nil
 }
