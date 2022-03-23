@@ -26,6 +26,8 @@ type UserRepo interface {
 	Register(username, password, token string) error
 	// UnRegister 用户注销
 	UnRegister(username string) error
+	// GetClientCode 获得生成的客户端代码
+	GetClientCode(username string) ([]byte, error)
 }
 
 func NewUserUsecase(server *conf.Server, repo UserRepo, logger log.Logger) (*UserUsecase, error) {
@@ -145,6 +147,10 @@ func (u *UserUsecase) Unregister(username, password string) error {
 	}
 
 	return u.clear(username)
+}
+
+func (u *UserUsecase) GetClientCode(username string) ([]byte, error) {
+	return u.repo.GetClientCode(username)
 }
 
 // 清理用户相关的资源

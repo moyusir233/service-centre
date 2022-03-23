@@ -30,6 +30,12 @@ service User {
             delete: "/users"
         };
     };
+    // 获得客户端代码
+    rpc DownloadClientCode(DownloadClientCodeRequest)returns (File){
+        option (google.api.http) = {
+            get: "/users/client-code/{username}"
+        };
+    };
 }
 // 注册请求
 message RegisterRequest {
@@ -57,4 +63,13 @@ message LoginReply {
 // 注销响应
 message UnregisterReply {
     bool success = 1;
+}
+
+// 下载文件的请求和响应
+message DownloadClientCodeRequest{
+    string username=1;
+}
+message File{
+    bytes content=1;
+    string name=2;
 }

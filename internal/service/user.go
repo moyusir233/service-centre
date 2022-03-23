@@ -49,3 +49,12 @@ func (s *UserService) Unregister(ctx context.Context, req *utilApi.User) (*pb.Un
 		Success: true,
 	}, nil
 }
+
+func (s *UserService) DownloadClientCode(ctx context.Context, req *pb.DownloadClientCodeRequest) (*pb.File, error) {
+	code, err := s.uc.GetClientCode(req.Username)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.File{Content: code, Name: "client_code.zip"}, nil
+}

@@ -66,6 +66,22 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/UnregisterReply'
+    /users/client-code/{username}:
+        get:
+            summary: 获得客户端代码
+            operationId: User_DownloadClientCode
+            parameters:
+                - name: username
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/File'
 components:
     schemas:
         DeviceConfigRegisterInfo:
@@ -83,6 +99,13 @@ components:
                     items:
                         $ref: '#/components/schemas/Field'
             description: 设备状态注册信息
+        File:
+            properties:
+                content:
+                    type: string
+                    format: bytes
+                name:
+                    type: string
         LoginReply:
             properties:
                 success:

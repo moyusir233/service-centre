@@ -15,6 +15,7 @@ func NewHTTPServer(c *conf.Server, us *service.UserService, logger log.Logger) *
 		http.Middleware(
 			recovery.Recovery(),
 		),
+		http.ResponseEncoder(MyResponseEncoder),
 	}
 	if c.Http.Network != "" {
 		opts = append(opts, http.Network(c.Http.Network))

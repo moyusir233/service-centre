@@ -2,9 +2,9 @@ package data
 
 import (
 	"context"
+	"fmt"
 	"gitee.com/moyusir/service-centre/internal/biz"
 	"github.com/go-kratos/kratos/v2/errors"
-	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -13,19 +13,19 @@ const (
 	PSWS_KEY = "passwords"
 	// TOKENS_KEY 用户token hash的key
 	TOKENS_KEY = "tokens"
+	// CLIENT_CODE_KEY 用户客户端代码hash的key
+	CLIENT_CODE_KEY = "client_code"
 )
 
 // RedisRepo redis数据库操作对象，可以理解为dao
 type RedisRepo struct {
 	client *Data
-	logger *log.Helper
 }
 
 // NewRedisRepo 实例化redis数据库操作对象
-func NewRedisRepo(data *Data, logger log.Logger) biz.UserRepo {
+func NewRedisRepo(data *Data) biz.UserRepo {
 	return &RedisRepo{
 		client: data,
-		logger: log.NewHelper(logger),
 	}
 }
 
@@ -76,9 +76,10 @@ func (r *RedisRepo) Register(username, password, token string) error {
 func (r *RedisRepo) UnRegister(username string) error {
 	// 利用事务保证全部删除完毕
 	cmders, err := r.client.TxPipelined(context.Background(), func(p redis.Pipeliner) error {
-		// 删除密码和token
+		// 删除密码和token以及客户端代码
 		p.HDel(context.Background(), PSWS_KEY, username)
 		p.HDel(context.Background(), TOKENS_KEY, username)
+		p.HDel(context.Background(), CLIENT_CODE_KEY, username)
 
 		// 获得然后删除和用户相关的键，包括设备配置信息、状态信息、警告信息等
 		keys := p.Keys(context.Background(), username+"*").Val()
@@ -99,4 +100,20 @@ func (r *RedisRepo) UnRegister(username string) error {
 	}
 
 	return nil
+}
+
+// GetClientCode 获得以zip文件二进制数据的十六进制字符串形式保存在hash中的客户端代码
+func (r *RedisRepo) GetClientCode(username string) ([]byte, error) {
+	result, err := r.client.HGet(context.Background(), CLIENT_CODE_KEY, username).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []byte
+	_, err = fmt.Sscanf(result, "%x", &ret)
+	if err != nil {
+		return nil, err
+	}
+
+	return ret, nil
 }

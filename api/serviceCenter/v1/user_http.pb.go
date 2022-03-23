@@ -19,6 +19,7 @@ var _ = binding.EncodeURL
 const _ = http.SupportPackageIsVersion1
 
 type UserHTTPServer interface {
+	DownloadClientCode(context.Context, *DownloadClientCodeRequest) (*File, error)
 	Login(context.Context, *v1.User) (*LoginReply, error)
 	Register(context.Context, *RegisterRequest) (*RegisterReply, error)
 	Unregister(context.Context, *v1.User) (*UnregisterReply, error)
@@ -29,6 +30,7 @@ func RegisterUserHTTPServer(s *http.Server, srv UserHTTPServer) {
 	r.POST("/users", _User_Register0_HTTP_Handler(srv))
 	r.GET("/users", _User_Login0_HTTP_Handler(srv))
 	r.DELETE("/users", _User_Unregister0_HTTP_Handler(srv))
+	r.GET("/users/client-code/{username}", _User_DownloadClientCode0_HTTP_Handler(srv))
 }
 
 func _User_Register0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) error {
@@ -88,7 +90,30 @@ func _User_Unregister0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) e
 	}
 }
 
+func _User_DownloadClientCode0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DownloadClientCodeRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, "/api.serviceCentre.v1.User/DownloadClientCode")
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DownloadClientCode(ctx, req.(*DownloadClientCodeRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*File)
+		return ctx.Result(200, reply)
+	}
+}
+
 type UserHTTPClient interface {
+	DownloadClientCode(ctx context.Context, req *DownloadClientCodeRequest, opts ...http.CallOption) (rsp *File, err error)
 	Login(ctx context.Context, req *v1.User, opts ...http.CallOption) (rsp *LoginReply, err error)
 	Register(ctx context.Context, req *RegisterRequest, opts ...http.CallOption) (rsp *RegisterReply, err error)
 	Unregister(ctx context.Context, req *v1.User, opts ...http.CallOption) (rsp *UnregisterReply, err error)
@@ -100,6 +125,19 @@ type UserHTTPClientImpl struct {
 
 func NewUserHTTPClient(client *http.Client) UserHTTPClient {
 	return &UserHTTPClientImpl{client}
+}
+
+func (c *UserHTTPClientImpl) DownloadClientCode(ctx context.Context, in *DownloadClientCodeRequest, opts ...http.CallOption) (*File, error) {
+	var out File
+	pattern := "/users/client-code/{username}"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation("/api.serviceCentre.v1.User/DownloadClientCode"))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, err
 }
 
 func (c *UserHTTPClientImpl) Login(ctx context.Context, in *v1.User, opts ...http.CallOption) (*LoginReply, error) {

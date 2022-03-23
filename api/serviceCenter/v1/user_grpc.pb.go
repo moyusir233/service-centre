@@ -29,6 +29,8 @@ type UserClient interface {
 	Login(ctx context.Context, in *v1.User, opts ...grpc.CallOption) (*LoginReply, error)
 	// 用户注销
 	Unregister(ctx context.Context, in *v1.User, opts ...grpc.CallOption) (*UnregisterReply, error)
+	// 获得客户端代码
+	DownloadClientCode(ctx context.Context, in *DownloadClientCodeRequest, opts ...grpc.CallOption) (*File, error)
 }
 
 type userClient struct {
@@ -66,6 +68,15 @@ func (c *userClient) Unregister(ctx context.Context, in *v1.User, opts ...grpc.C
 	return out, nil
 }
 
+func (c *userClient) DownloadClientCode(ctx context.Context, in *DownloadClientCodeRequest, opts ...grpc.CallOption) (*File, error) {
+	out := new(File)
+	err := c.cc.Invoke(ctx, "/api.serviceCentre.v1.User/DownloadClientCode", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServer is the server API for User service.
 // All implementations must embed UnimplementedUserServer
 // for forward compatibility
@@ -76,6 +87,8 @@ type UserServer interface {
 	Login(context.Context, *v1.User) (*LoginReply, error)
 	// 用户注销
 	Unregister(context.Context, *v1.User) (*UnregisterReply, error)
+	// 获得客户端代码
+	DownloadClientCode(context.Context, *DownloadClientCodeRequest) (*File, error)
 	mustEmbedUnimplementedUserServer()
 }
 
@@ -91,6 +104,9 @@ func (UnimplementedUserServer) Login(context.Context, *v1.User) (*LoginReply, er
 }
 func (UnimplementedUserServer) Unregister(context.Context, *v1.User) (*UnregisterReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Unregister not implemented")
+}
+func (UnimplementedUserServer) DownloadClientCode(context.Context, *DownloadClientCodeRequest) (*File, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DownloadClientCode not implemented")
 }
 func (UnimplementedUserServer) mustEmbedUnimplementedUserServer() {}
 
@@ -159,6 +175,24 @@ func _User_Unregister_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _User_DownloadClientCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownloadClientCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).DownloadClientCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.serviceCentre.v1.User/DownloadClientCode",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).DownloadClientCode(ctx, req.(*DownloadClientCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // User_ServiceDesc is the grpc.ServiceDesc for User service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -177,6 +211,10 @@ var User_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Unregister",
 			Handler:    _User_Unregister_Handler,
+		},
+		{
+			MethodName: "DownloadClientCode",
+			Handler:    _User_DownloadClientCode_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

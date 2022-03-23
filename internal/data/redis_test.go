@@ -18,7 +18,7 @@ func TestRedisRepo(t *testing.T) {
 	}
 	t.Cleanup(cleanUp)
 
-	redisRepo := NewRedisRepo(data, log.DefaultLogger)
+	redisRepo := NewRedisRepo(data)
 	var (
 		username = "test"
 		password = "test"

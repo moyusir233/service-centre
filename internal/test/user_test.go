@@ -10,6 +10,7 @@ import (
 	"github.com/imroc/req/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 )
@@ -17,6 +18,7 @@ import (
 func TestUserUsecase(t *testing.T) {
 	const (
 		KONG_HTTP_URL = "http://kong.test.svc.cluster.local:8000"
+		username      = "test"
 	)
 	// 定义生成代码需要使用的注册信息
 	configInfo := []*utilApi.DeviceConfigRegisterInfo{
@@ -125,8 +127,8 @@ func TestUserUsecase(t *testing.T) {
 	}
 	registerReq := &v1.RegisterRequest{
 		User: &utilApi.User{
-			Id:       "test",
-			Password: "test",
+			Id:       username,
+			Password: username,
 		},
 		DeviceConfigRegisterInfos: configInfo,
 		DeviceStateRegisterInfos:  stateInfo,
@@ -140,8 +142,8 @@ func TestUserUsecase(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		_, err := userHTTPClient.Unregister(context.Background(), &utilApi.User{
-			Id:       "test",
-			Password: "test",
+			Id:       username,
+			Password: username,
 		})
 		if err != nil {
 			t.Error(err)
@@ -149,8 +151,8 @@ func TestUserUsecase(t *testing.T) {
 	})
 
 	reply, err := userHTTPClient.Login(context.Background(), &utilApi.User{
-		Id:       "test",
-		Password: "test",
+		Id:       username,
+		Password: username,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -159,13 +161,36 @@ func TestUserUsecase(t *testing.T) {
 	// 等待路由注册生效
 	time.Sleep(5 * time.Second)
 
+	// 测试获得客户端文件保存到本地
+	t.Run("Test_GetClientCode", func(t *testing.T) {
+		client := req.C().DevMode().SetBaseURL("http://localhost:8000")
+		response, err := client.R().SetPathParam("username", username).
+			Get("/users/client-code/{username}")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if response.IsError() {
+			t.Fatal(response.Error())
+		}
+
+		file, err := os.Create("client_code.zip")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer file.Close()
+		_, err = file.Write(response.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	// 发送查询设备状态注册信息的请求
 	t.Run("Test_GetDeviceStateRegisterInfo", func(t *testing.T) {
 		client := req.C().DevMode().SetBaseURL(KONG_HTTP_URL)
 		response, err := client.R().
 			SetHeaders(map[string]string{
 				"X-Api-Key":      reply.Token,
-				"X-Service-Type": "test-dp",
+				"X-Service-Type": username + "-dp",
 			}).Get("/register-info/states/0")
 		if err != nil {
 			t.Fatal(err)
@@ -191,7 +216,7 @@ func TestUserUsecase(t *testing.T) {
 			"ws://kong.test.svc.cluster.local:8000/warnings/push",
 			http.Header{
 				"X-Api-Key":      {reply.Token},
-				"X-Service-Type": {"test-dp"},
+				"X-Service-Type": {username + "-dp"},
 			},
 		)
 		if err != nil {

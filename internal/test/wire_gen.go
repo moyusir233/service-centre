@@ -24,7 +24,7 @@ func initApp(confServer *conf.Server, confData *conf.Data, logger log.Logger) (*
 	if err != nil {
 		return nil, nil, err
 	}
-	userRepo := data.NewRedisRepo(dataData, logger)
+	userRepo := data.NewRedisRepo(dataData)
 	userUsecase, err := biz.NewUserUsecase(confServer, userRepo, logger)
 	if err != nil {
 		cleanup()
