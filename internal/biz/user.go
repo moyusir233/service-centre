@@ -95,7 +95,7 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 		dcService, err = u.controller.DeployDataCollectionService(&kubecontroller.DataCollectionDeployOption{
 			BaseDeployOption: kubecontroller.BaseDeployOption{
 				Username:                 username,
-				Replica:                  3,
+				Replica:                  2,
 				Timeout:                  5 * time.Minute,
 				CompilationCenterAddress: u.compilationCenterAddress,
 				RegisterInfo:             registerInfo,

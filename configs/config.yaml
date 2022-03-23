@@ -11,7 +11,7 @@ server:
     namespace: test
   compilationCenter:
     address: compilation-center.test.svc.cluster.local:9000
-  appDomainName: gd-k8s-master01
+  appDomainName: kong.test.svc.cluster.local
 data:
   redis:
     host: test-redis.test.svc.cluster.local

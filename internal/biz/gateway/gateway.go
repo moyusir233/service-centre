@@ -68,7 +68,6 @@ func (m *Manager) CreateDcServiceRoute(username string, service *corev1.Service)
 		// k8s中服务名即相应的域名
 		Host:    service.Name,
 		Port:    int(port),
-		Path:    "/",
 		Enabled: true,
 		Tags:    []string{username},
 	}

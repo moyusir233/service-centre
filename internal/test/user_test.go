@@ -2,9 +2,9 @@ package test
 
 import (
 	"context"
-	"encoding/json"
 	v1 "gitee.com/moyusir/service-centre/api/serviceCenter/v1"
 	utilApi "gitee.com/moyusir/util/api/util/v1"
+	"github.com/go-kratos/kratos/v2/encoding"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"github.com/imroc/req/v3"
@@ -156,9 +156,12 @@ func TestUserUsecase(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// 等待路由注册生效
+	time.Sleep(5 * time.Second)
+
 	// 发送查询设备状态注册信息的请求
 	t.Run("Test_GetDeviceStateRegisterInfo", func(t *testing.T) {
-		client := req.C().SetBaseURL(KONG_HTTP_URL)
+		client := req.C().DevMode().SetBaseURL(KONG_HTTP_URL)
 		response, err := client.R().
 			SetHeaders(map[string]string{
 				"X-Api-Key":      reply.Token,
@@ -172,13 +175,13 @@ func TestUserUsecase(t *testing.T) {
 		}
 
 		registerInfo := new(utilApi.DeviceStateRegisterInfo)
-		err = json.NewDecoder(response.Body).Decode(registerInfo)
+		err = encoding.GetCodec("json").Unmarshal(response.Bytes(), registerInfo)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// 比较查询得到的注册信息和一开始注册上传的是否一样
 		if !proto.Equal(registerReq, stateInfo[0]) {
-			t.Error("wrong device state register info")
+			t.Errorf("wrong device state register info %v\n%v", registerReq, stateInfo[0])
 		}
 	})
 
@@ -192,7 +195,7 @@ func TestUserUsecase(t *testing.T) {
 			},
 		)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 		err = conn.Close()
 		if err != nil {
