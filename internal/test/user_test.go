@@ -60,7 +60,7 @@ func TestUserUsecase(t *testing.T) {
 				},
 				{
 					Name: "current",
-					Type: utilApi.Type_DOUBLE,
+					Type: utilApi.Type_INT64,
 					WarningRule: &utilApi.DeviceStateRegisterInfo_WarningRule{
 						CmpRule: &utilApi.DeviceStateRegisterInfo_CmpRule{
 							Cmp: utilApi.DeviceStateRegisterInfo_GT,
@@ -72,7 +72,7 @@ func TestUserUsecase(t *testing.T) {
 				},
 				{
 					Name: "voltage",
-					Type: utilApi.Type_DOUBLE,
+					Type: utilApi.Type_INT64,
 					WarningRule: &utilApi.DeviceStateRegisterInfo_WarningRule{
 						CmpRule: &utilApi.DeviceStateRegisterInfo_CmpRule{
 							Cmp: utilApi.DeviceStateRegisterInfo_GT,
@@ -157,42 +157,46 @@ func TestUserUsecase(t *testing.T) {
 	}
 
 	// 发送查询设备状态注册信息的请求
-	client := req.C().SetBaseURL(KONG_HTTP_URL)
-	response, err := client.R().
-		SetHeaders(map[string]string{
-			"X-Api-Key":      reply.Token,
-			"X-Service-Type": "test-dp",
-		}).Get("/register-info/states/0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if response.IsError() {
-		t.Fatal(response.Error())
-	}
+	t.Run("Test_GetDeviceStateRegisterInfo", func(t *testing.T) {
+		client := req.C().SetBaseURL(KONG_HTTP_URL)
+		response, err := client.R().
+			SetHeaders(map[string]string{
+				"X-Api-Key":      reply.Token,
+				"X-Service-Type": "test-dp",
+			}).Get("/register-info/states/0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if response.IsError() {
+			t.Fatal(response.Error())
+		}
 
-	registerInfo := new(utilApi.DeviceStateRegisterInfo)
-	err = json.NewDecoder(response.Body).Decode(registerInfo)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// 比较查询得到的注册信息和一开始注册上传的是否一样
-	if !proto.Equal(registerReq, stateInfo[0]) {
-		t.Error("wrong device state register info")
-	}
+		registerInfo := new(utilApi.DeviceStateRegisterInfo)
+		err = json.NewDecoder(response.Body).Decode(registerInfo)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// 比较查询得到的注册信息和一开始注册上传的是否一样
+		if !proto.Equal(registerReq, stateInfo[0]) {
+			t.Error("wrong device state register info")
+		}
+	})
 
-	// 建立接收故障信息推送的ws连接
-	conn, _, err := websocket.DefaultDialer.Dial(
-		"ws://kong.test.svc.cluster.local:8000/warnings/push",
-		http.Header{
-			"X-Api-Key":      {reply.Token},
-			"X-Service-Type": {"test-dp"},
-		},
-	)
-	if err != nil {
-		t.Error(err)
-	}
-	err = conn.Close()
-	if err != nil {
-		t.Error(err)
-	}
+	t.Run("Test_WarningPushWebsocket", func(t *testing.T) {
+		// 建立接收故障信息推送的ws连接
+		conn, _, err := websocket.DefaultDialer.Dial(
+			"ws://kong.test.svc.cluster.local:8000/warnings/push",
+			http.Header{
+				"X-Api-Key":      {reply.Token},
+				"X-Service-Type": {"test-dp"},
+			},
+		)
+		if err != nil {
+			t.Error(err)
+		}
+		err = conn.Close()
+		if err != nil {
+			t.Error(err)
+		}
+	})
 }
