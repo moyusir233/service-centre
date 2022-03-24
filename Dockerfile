@@ -1,9 +1,9 @@
-FROM golang:1.16 AS builder
+FROM golang:1.17 AS builder
 
 COPY . /src
 WORKDIR /src
 
-RUN GOPROXY=https://goproxy.cn make build
+RUN mkdir bin && go build -o ./bin ./... && mv bin/$(ls bin) bin/server
 
 FROM debian:stable-slim
 
@@ -18,7 +18,6 @@ COPY --from=builder /src/bin /app
 WORKDIR /app
 
 EXPOSE 8000
-EXPOSE 9000
-VOLUME /data/conf
+VOLUME /etc/app-configs
 
-CMD ["./server", "-conf", "/data/conf"]
+CMD ["./server", "-conf", "/etc/app-configs/config.yaml"]
