@@ -18,7 +18,7 @@ import (
 func TestUserUsecase(t *testing.T) {
 	const (
 		KONG_HTTP_URL = "http://kong.test.svc.cluster.local:8000"
-		username      = "test"
+		username      = "testreg"
 	)
 	// 定义生成代码需要使用的注册信息
 	configInfo := []*utilApi.DeviceConfigRegisterInfo{
@@ -225,6 +225,233 @@ func TestUserUsecase(t *testing.T) {
 		err = conn.Close()
 		if err != nil {
 			t.Error(err)
+		}
+	})
+}
+func TestUser_Register(t *testing.T) {
+	// 测试用户利用违规的注册信息进行登录，校验是否成功
+	userHTTPClient := StartServiceCenterServer(t)
+	username := "testreg"
+	t.Cleanup(func() {
+		userHTTPClient.Unregister(context.Background(), &utilApi.User{
+			Id:       username,
+			Password: username,
+		})
+	})
+
+	t.Run("Test_RepeatedFieldName", func(t *testing.T) {
+		// 定义生成代码需要使用的注册信息
+		configInfo := []*utilApi.DeviceConfigRegisterInfo{
+			{
+				Fields: []*utilApi.DeviceConfigRegisterInfo_Field{
+					{
+						Name: "id",
+						Type: utilApi.Type_STRING,
+					},
+					{
+						Name: "status",
+						Type: utilApi.Type_BOOL,
+					},
+					{
+						Name: "power",
+						Type: utilApi.Type_DOUBLE,
+					},
+				},
+			},
+		}
+		stateInfo := []*utilApi.DeviceStateRegisterInfo{
+			{
+				Fields: []*utilApi.DeviceStateRegisterInfo_Field{
+					{
+						Name:        "id",
+						Type:        utilApi.Type_STRING,
+						WarningRule: nil,
+					},
+					{
+						Name:        "time",
+						Type:        utilApi.Type_TIMESTAMP,
+						WarningRule: nil,
+					},
+					{
+						Name: "time",
+						Type: utilApi.Type_INT64,
+						WarningRule: &utilApi.DeviceStateRegisterInfo_WarningRule{
+							CmpRule: &utilApi.DeviceStateRegisterInfo_CmpRule{
+								Cmp: utilApi.DeviceStateRegisterInfo_GT,
+								Arg: "1000",
+							},
+							AggregationOperation: utilApi.DeviceStateRegisterInfo_MIN,
+							Duration:             durationpb.New(time.Minute),
+						},
+					},
+				},
+			},
+		}
+
+		// 发送包含重复字段设备状态信息的请求
+		repeatStateFieldNameReq := &v1.RegisterRequest{
+			User: &utilApi.User{
+				Id:       username,
+				Password: username,
+			},
+			DeviceConfigRegisterInfos: configInfo,
+			DeviceStateRegisterInfos:  stateInfo,
+		}
+		_, err := userHTTPClient.Register(context.Background(), repeatStateFieldNameReq)
+		if err == nil {
+			t.Error("failed to validate repeat field")
+		}
+
+		// 发送包含重复字段配置状态信息的请求
+		stateInfo[0].Fields[2].Name = "current"
+		configInfo[0].Fields[2].Name = "status"
+		repeatConfigFieldNameReq := &v1.RegisterRequest{
+			User: &utilApi.User{
+				Id:       username,
+				Password: username,
+			},
+			DeviceConfigRegisterInfos: configInfo,
+			DeviceStateRegisterInfos:  stateInfo,
+		}
+		_, err = userHTTPClient.Register(context.Background(), repeatConfigFieldNameReq)
+		if err == nil {
+			t.Error("failed to validate repeat field")
+		}
+	})
+
+	t.Run("Test_MissingField", func(t *testing.T) {
+		// 定义生成代码需要使用的注册信息
+		configInfo := []*utilApi.DeviceConfigRegisterInfo{
+			{
+				Fields: []*utilApi.DeviceConfigRegisterInfo_Field{
+					{
+						Name: "lost_id",
+						Type: utilApi.Type_STRING,
+					},
+					{
+						Name: "status",
+						Type: utilApi.Type_BOOL,
+					},
+				},
+			},
+		}
+		stateInfo := []*utilApi.DeviceStateRegisterInfo{
+			{
+				Fields: []*utilApi.DeviceStateRegisterInfo_Field{
+					{
+						Name:        "id",
+						Type:        utilApi.Type_STRING,
+						WarningRule: nil,
+					},
+					{
+						Name:        "time",
+						Type:        utilApi.Type_TIMESTAMP,
+						WarningRule: nil,
+					},
+				},
+			},
+		}
+
+		// 发送不包含id的配置信息的注册请求
+		lostConfigIDReq := &v1.RegisterRequest{
+			User: &utilApi.User{
+				Id:       username,
+				Password: username,
+			},
+			DeviceConfigRegisterInfos: configInfo,
+			DeviceStateRegisterInfos:  stateInfo,
+		}
+		_, err := userHTTPClient.Register(context.Background(), lostConfigIDReq)
+		if err == nil {
+			t.Error("failed to validate missing id field")
+		}
+
+		// 发送不包含id的设备状态信息的注册请求
+		configInfo[0].Fields[0].Name = "id"
+		stateInfo[0].Fields[0].Name = "lost_id"
+		lostStateIDReq := &v1.RegisterRequest{
+			User: &utilApi.User{
+				Id:       username,
+				Password: username,
+			},
+			DeviceConfigRegisterInfos: configInfo,
+			DeviceStateRegisterInfos:  stateInfo,
+		}
+		_, err = userHTTPClient.Register(context.Background(), lostStateIDReq)
+		if err == nil {
+			t.Error("failed to validate missing id field")
+		}
+
+		// 发送不包含time的设备状态信息的注册请求
+		stateInfo[0].Fields[0].Name = "id"
+		stateInfo[0].Fields[1].Name = "lost_time"
+		lostStateTimeReq := &v1.RegisterRequest{
+			User: &utilApi.User{
+				Id:       username,
+				Password: username,
+			},
+			DeviceConfigRegisterInfos: configInfo,
+			DeviceStateRegisterInfos:  stateInfo,
+		}
+		_, err = userHTTPClient.Register(context.Background(), lostStateTimeReq)
+		if err == nil {
+			t.Error("failed to validate missing time field")
+		}
+	})
+
+	t.Run("Test_WrongWarningRule", func(t *testing.T) {
+		// 定义生成代码需要使用的注册信息
+		configInfo := []*utilApi.DeviceConfigRegisterInfo{
+			{
+				Fields: []*utilApi.DeviceConfigRegisterInfo_Field{
+					{
+						Name: "id",
+						Type: utilApi.Type_STRING,
+					},
+					{
+						Name: "status",
+						Type: utilApi.Type_BOOL,
+					},
+				},
+			},
+		}
+		stateInfo := []*utilApi.DeviceStateRegisterInfo{
+			{
+				Fields: []*utilApi.DeviceStateRegisterInfo_Field{
+					{
+						Name: "id",
+						Type: utilApi.Type_STRING,
+						WarningRule: &utilApi.DeviceStateRegisterInfo_WarningRule{
+							CmpRule:              nil,
+							AggregationOperation: 0,
+							Duration:             nil,
+						},
+					},
+					{
+						Name: "time",
+						Type: utilApi.Type_TIMESTAMP,
+						WarningRule: &utilApi.DeviceStateRegisterInfo_WarningRule{
+							CmpRule:              nil,
+							AggregationOperation: 0,
+							Duration:             nil,
+						},
+					},
+				},
+			},
+		}
+
+		// 发送为非数值字段注册预警规则的请求
+		lostConfigIDReq := &v1.RegisterRequest{
+			User: &utilApi.User{
+				Id:       username,
+				Password: username,
+			},
+			DeviceConfigRegisterInfos: configInfo,
+			DeviceStateRegisterInfos:  stateInfo,
+		}
+		_, err := userHTTPClient.Register(context.Background(), lostConfigIDReq)
+		if err == nil {
+			t.Error("failed to validate wrong warning rule")
 		}
 	})
 }

@@ -3,7 +3,8 @@ module gitee.com/moyusir/service-centre
 go 1.17
 
 require (
-	gitee.com/moyusir/util v0.1.4
+	gitee.com/moyusir/util v1.0.2
+	github.com/envoyproxy/protoc-gen-validate v0.6.7
 	github.com/go-kratos/kratos/v2 v2.2.1
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/golang/protobuf v1.5.2
@@ -41,7 +42,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	golang.org/x/net v0.0.0-20220111093109-d55c255bac03 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
-	golang.org/x/sys v0.0.0-20210816074244-15123e1e1f71 // indirect
+	golang.org/x/sys v0.0.0-20210816183151-1e6c022a8912 // indirect
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect

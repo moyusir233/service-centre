@@ -4,6 +4,7 @@ package api.serviceCentre.v1;
 
 import "google/api/annotations.proto";
 import "util/api/util/v1/general.proto";
+import "validate/validate.proto";
 
 option go_package = "gitee.com/moyusir/service-centre/api/serviceCenter/v1;v1";
 option java_multiple_files = true;
@@ -39,12 +40,12 @@ service User {
 }
 // 注册请求
 message RegisterRequest {
-    // 用户注册信息
-    api.util.v1.User user = 1;
+    // 用户注册信息，用户信息不能为空
+    api.util.v1.User user = 1[(validate.rules).message.required = true];
     // 配置注册信息
     repeated api.util.v1.DeviceConfigRegisterInfo device_config_register_infos = 2;
-    // 设备状态及预警规则注册信息
-    repeated api.util.v1.DeviceStateRegisterInfo device_state_register_infos = 3;
+    // 设备状态及预警规则注册信息，至少注册一台设备的状态信息
+    repeated api.util.v1.DeviceStateRegisterInfo device_state_register_infos = 3[(validate.rules).repeated.min_items = 1];
 }
 // 注册响应
 message RegisterReply {
