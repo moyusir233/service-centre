@@ -43,6 +43,15 @@ api:
  	       --openapi_out==paths=source_relative:. \
 	       $(API_PROTO_FILES)
 
+.PHONY: openapi
+openapi:
+	protoc --proto_path=. \
+            --proto_path=./third_party \
+            --openapiv2_out . \
+            --openapiv2_opt logtostderr=true \
+            --openapiv2_opt json_names_for_fields=false \
+            $(API_PROTO_FILES)
+
 .PHONY: validate
 # generate validate proto
 validate:

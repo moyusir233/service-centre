@@ -1,0 +1,398 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "api/serviceCenter/v1/user.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "User"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/users": {
+      "get": {
+        "summary": "用户登录验证",
+        "operationId": "User_Login",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginReply"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "用户id.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "password",
+            "description": "用户密码.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "User"
+        ]
+      },
+      "delete": {
+        "summary": "用户注销",
+        "operationId": "User_Unregister",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnregisterReply"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "用户id.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "password",
+            "description": "用户密码.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "User"
+        ]
+      },
+      "post": {
+        "summary": "用户注册服务，一次性注册用户信息、配置信息、设备状态信息以及预警规则",
+        "operationId": "User_Register",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RegisterReply"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RegisterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/users/client-code/{username}": {
+      "get": {
+        "summary": "获得客户端代码",
+        "operationId": "User_DownloadClientCode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1File"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "User"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "DeviceStateRegisterInfoAggregationOperation": {
+      "type": "string",
+      "enum": [
+        "AVG",
+        "MAX",
+        "MIN",
+        "SUM"
+      ],
+      "default": "AVG",
+      "description": "- AVG: 取平均值\n - MAX: 取最大值\n - MIN: 取最小值\n - SUM: 取总和",
+      "title": "数据聚合规则"
+    },
+    "DeviceStateRegisterInfoCmp": {
+      "type": "string",
+      "enum": [
+        "EQ",
+        "GT",
+        "LT"
+      ],
+      "default": "EQ",
+      "description": "- EQ: 等于\n - GT: 大于\n - LT: 小于",
+      "title": "预警比较方法，用于预警检测时的判断"
+    },
+    "DeviceStateRegisterInfoCmpRule": {
+      "type": "object",
+      "properties": {
+        "cmp": {
+          "$ref": "#/definitions/DeviceStateRegisterInfoCmp"
+        },
+        "arg": {
+          "type": "string",
+          "title": "预警比较方法对应的参数，解析时需对前端传来的arg进行类型检查"
+        }
+      },
+      "title": "预警比较规则，由比较方法和比较参数组成"
+    },
+    "DeviceStateRegisterInfoWarningRule": {
+      "type": "object",
+      "properties": {
+        "cmp_rule": {
+          "$ref": "#/definitions/DeviceStateRegisterInfoCmpRule",
+          "title": "预警比较规则"
+        },
+        "aggregation_operation": {
+          "$ref": "#/definitions/DeviceStateRegisterInfoAggregationOperation",
+          "title": "数据聚合操作"
+        },
+        "duration": {
+          "type": "string",
+          "title": "指定的时间范围"
+        }
+      },
+      "title": "预警规则信息，预警时依据依据规则定义的比较规则，对指定时间范围内的数据查询，判断是否需要产生警告"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "utilv1Type": {
+      "type": "string",
+      "enum": [
+        "DOUBLE",
+        "INT32",
+        "INT64",
+        "UINT32",
+        "UINT64",
+        "BOOL",
+        "STRING",
+        "BYTE"
+      ],
+      "default": "DOUBLE",
+      "title": "可选的数据注册类型"
+    },
+    "v1DeviceConfigRegisterInfo": {
+      "type": "object",
+      "properties": {
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1DeviceConfigRegisterInfoField"
+          },
+          "title": "单个设备的配置注册信息包含若干配置字段1"
+        }
+      },
+      "title": "配置注册信息"
+    },
+    "v1DeviceConfigRegisterInfoField": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "配置字段名"
+        },
+        "type": {
+          "$ref": "#/definitions/utilv1Type",
+          "title": "配置字段类型"
+        }
+      },
+      "title": "配置注册信息字段"
+    },
+    "v1DeviceStateRegisterInfo": {
+      "type": "object",
+      "properties": {
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1DeviceStateRegisterInfoField"
+          }
+        }
+      },
+      "title": "设备状态注册信息"
+    },
+    "v1DeviceStateRegisterInfoField": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "设备状态信息字段名"
+        },
+        "type": {
+          "$ref": "#/definitions/utilv1Type",
+          "title": "设备状态信息字段类型"
+        },
+        "warning_rule": {
+          "$ref": "#/definitions/DeviceStateRegisterInfoWarningRule",
+          "title": "预警规则"
+        }
+      },
+      "title": "设备状态信息注册字段"
+    },
+    "v1File": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "format": "byte"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LoginReply": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "token": {
+          "type": "string"
+        }
+      },
+      "title": "登录响应"
+    },
+    "v1RegisterReply": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "title": "表示是否注册成功"
+        },
+        "token": {
+          "type": "string",
+          "title": "用户的token"
+        }
+      },
+      "title": "注册响应"
+    },
+    "v1RegisterRequest": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User",
+          "title": "用户注册信息，用户信息不能为空"
+        },
+        "device_config_register_infos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1DeviceConfigRegisterInfo"
+          },
+          "title": "配置注册信息"
+        },
+        "device_state_register_infos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1DeviceStateRegisterInfo"
+          },
+          "title": "设备状态及预警规则注册信息，至少注册一台设备的状态信息"
+        }
+      },
+      "title": "注册请求"
+    },
+    "v1UnregisterReply": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "title": "注销响应"
+    },
+    "v1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "用户id"
+        },
+        "password": {
+          "type": "string",
+          "title": "用户密码"
+        }
+      },
+      "title": "用户注册信息"
+    }
+  }
+}
