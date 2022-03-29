@@ -30,6 +30,14 @@ message Server {
   message CompilationCenter{
     string address=1;
   }
+  message Influxdb{
+    // influxdb服务器的地址
+    string server_url=1;
+    // 读写influxdb所需的auth token
+    string auth_token=2;
+    // influxdb中用户的标识信息 organization
+    string org=3;
+  }
 
   HTTP http = 1;
   GRPC grpc = 2;
@@ -37,6 +45,7 @@ message Server {
   Cluster cluster = 4;
   CompilationCenter compilation_center = 5;
   string app_domain_name=6;
+  Influxdb influxdb=7;
 }
 
 message Data {

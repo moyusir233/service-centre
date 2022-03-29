@@ -3,6 +3,7 @@ package biz
 import (
 	v1 "gitee.com/moyusir/service-centre/api/serviceCenter/v1"
 	"gitee.com/moyusir/service-centre/internal/biz/gateway"
+	"gitee.com/moyusir/service-centre/internal/biz/influxdb"
 	"gitee.com/moyusir/service-centre/internal/biz/kubecontroller"
 	"gitee.com/moyusir/service-centre/internal/conf"
 	"github.com/go-kratos/kratos/v2/errors"
@@ -17,6 +18,7 @@ type UserUsecase struct {
 	controller               *kubecontroller.KubeController
 	gateway                  *gateway.Manager
 	compilationCenterAddress string
+	influxdbClient           *influxdb.Client
 	logger                   *log.Helper
 }
 type UserRepo interface {
@@ -41,11 +43,18 @@ func NewUserUsecase(server *conf.Server, repo UserRepo, logger log.Logger) (*Use
 		return nil, err
 	}
 
+	influxdbClient, err := influxdb.NewInfluxdbClient(
+		server.Influxdb.ServerUrl, server.Influxdb.AuthToken, server.Influxdb.Org)
+	if err != nil {
+		return nil, err
+	}
+
 	return &UserUsecase{
 		repo:                     repo,
 		controller:               controller,
 		gateway:                  manager,
 		compilationCenterAddress: server.CompilationCenter.Address,
+		influxdbClient:           influxdbClient,
 		logger:                   log.NewHelper(logger),
 	}, nil
 }
@@ -55,8 +64,8 @@ func (u *UserUsecase) Login(username, password string) (token string, err error)
 }
 
 // Register 完成用户注册
-// 首先向网关创建相应consumer，获得apiKey，然后在数据库中保存用户信息，然后进行生成服务代码，
-// 然后为服务代码创建相应的configMap，然后启动相应的service和deployment，
+// 首先向网关创建相应consumer，获得apiKey，然后在数据库中保存用户信息，然后为用户创建相应的bucket，
+// 然后进行生成服务代码，为服务代码创建相应的configMap，然后启动相应的service和deployment，
 // 最后在网关创建服务、路由以及认证插件
 func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err error) {
 	if request == nil {
@@ -78,6 +87,12 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 
 	// 往数据库中保存用户信息
 	err = u.repo.Register(username, request.User.Password, token)
+	if err != nil {
+		return "", err
+	}
+
+	// 创建保存用户设备状态信息的influxdb bucket
+	err = u.influxdbClient.CreateBucket(username)
 	if err != nil {
 		return "", err
 	}
@@ -158,6 +173,7 @@ func (u *UserUsecase) clear(username string) (err error) {
 	// TODO 错误处理
 	err = u.repo.UnRegister(username)
 	err = u.gateway.Unregister(username)
+	err = u.influxdbClient.ClearBucket(username)
 	err = u.controller.Unregister(username)
 
 	return err

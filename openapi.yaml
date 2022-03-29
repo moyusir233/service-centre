@@ -135,7 +135,7 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/DeviceStateRegisterInfo'
-                    description: 设备状态及预警规则注册信息
+                    description: 设备状态及预警规则注册信息，至少注册一台设备的状态信息
             description: 注册请求
         UnregisterReply:
             properties:
