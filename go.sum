@@ -21,8 +21,8 @@ cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiy
 cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0ZeosJ0Rtdos=
 cloud.google.com/go/storage v1.6.0/go.mod h1:N7U0C8pVQ/+NIKOBQyamJIeKQKkZ+mxpohlUTyfDhBk=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-gitee.com/moyusir/util v1.0.2 h1:nhlK3UXomwrG1LJTejwLSZEG6co3H8dfwImMkVNF65Q=
-gitee.com/moyusir/util v1.0.2/go.mod h1:JNBNYQhzmuQrdlu+6q+ppWU2kHVkLv2KIht2n06cwcY=
+gitee.com/moyusir/util v1.0.5 h1:ylgQzXxocvb/D7uoIHvTyZQeqOIy9h3mjZ+oH6Or8aA=
+gitee.com/moyusir/util v1.0.5/go.mod h1:JNBNYQhzmuQrdlu+6q+ppWU2kHVkLv2KIht2n06cwcY=
 github.com/Azure/go-autorest v14.2.0+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
 github.com/Azure/go-autorest/autorest v0.11.18/go.mod h1:dSiJPy22c3u0OtOKDNttNgqpNFY/GeWa7GH/Pz56QRA=
 github.com/Azure/go-autorest/autorest/adal v0.9.13/go.mod h1:W/MM4U6nLxnIskrw4UwWzlHfGjwUS50aOsc/I3yuU8M=

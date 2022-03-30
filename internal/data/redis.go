@@ -37,12 +37,13 @@ func (r *RedisRepo) Login(username, password string) (token string, err error) {
 		return "", err
 	} else if psw != password {
 		return "", errors.New(
-			400, "LOGIN_FAIL", "User's account or password is wrong")
+			400, "Repo_Error", "用户账号或者密码错误")
 	}
 
 	token, err = r.client.HGet(context.Background(), TOKENS_KEY, username).Result()
 	if err != nil {
-		return "", err
+		return "", errors.New(
+			400, "Repo_Error", "用户账号或者密码错误")
 	}
 
 	return token, nil
@@ -57,15 +58,19 @@ func (r *RedisRepo) Register(username, password, token string) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return errors.Newf(
+			500, "Repo_Error",
+			"将用户信息保存到redis时发生了错误:%v",err)
 	}
 
 	// 检查结果
 	for _, cmder := range cmders {
 		if cmder.Err() != nil {
-			return cmder.Err()
+			return errors.Newf(
+				500, "Repo_Error",
+				"将用户信息保存到redis时发生了错误:%v",cmder.Err())
 		} else if !cmder.(*redis.BoolCmd).Val() {
-			return errors.New(400, "REGISTER_FAIL", "User account already exists")
+			return errors.New(400, "Repo_Error", "用户账号已经存在")
 		}
 	}
 
@@ -90,12 +95,16 @@ func (r *RedisRepo) UnRegister(username string) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return errors.Newf(
+			500, "Repo_Error",
+			"删除用户信息时发生了错误:%v",err)
 	}
 
 	for _, cmder := range cmders {
 		if cmder.Err() != nil {
-			return cmder.Err()
+			return errors.Newf(
+				500, "Repo_Error",
+				"删除用户信息时发生了错误:%v",cmder.Err())
 		}
 	}
 
@@ -106,13 +115,17 @@ func (r *RedisRepo) UnRegister(username string) error {
 func (r *RedisRepo) GetClientCode(username string) ([]byte, error) {
 	result, err := r.client.HGet(context.Background(), CLIENT_CODE_KEY, username).Result()
 	if err != nil {
-		return nil, err
+		return nil, errors.New(
+			400, "Repo_Error",
+			"客户相应的客户端代码不存在")
 	}
 
 	var ret []byte
 	_, err = fmt.Sscanf(result, "%x", &ret)
 	if err != nil {
-		return nil, err
+		return nil, errors.Newf(
+			500, "Repo_Error",
+			"将客户代码转换为二进制信息时发生了错误:%v",err)
 	}
 
 	return ret, nil

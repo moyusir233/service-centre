@@ -3,7 +3,7 @@ module gitee.com/moyusir/service-centre
 go 1.17
 
 require (
-	gitee.com/moyusir/util v1.0.2
+	gitee.com/moyusir/util v1.0.5
 	github.com/envoyproxy/protoc-gen-validate v0.6.7
 	github.com/go-kratos/kratos/v2 v2.2.1
 	github.com/go-redis/redis/v8 v8.11.4

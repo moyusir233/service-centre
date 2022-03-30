@@ -82,7 +82,10 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 	// 在网关创建用户对应的consumer，从而创建token
 	token, err = u.gateway.CreateConsumerAndKey(username)
 	if err != nil {
-		return "", err
+		return "", errors.Newf(
+			500, "Register_Error",
+			"创建用户对应的网关consumer时发生了错误:%v", err,
+		)
 	}
 
 	// 往数据库中保存用户信息
@@ -94,7 +97,10 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 	// 创建保存用户设备状态信息的influxdb bucket
 	err = u.influxdbClient.CreateBucket(username)
 	if err != nil {
-		return "", err
+		return "", errors.Newf(
+			500, "Register_Error",
+			"创建用户对应的influx bucket时发生了错误:%v", err,
+		)
 	}
 
 	// 为用户创建服务运行所需的k8s资源
@@ -102,7 +108,10 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 	registerInfo, err := u.controller.CreateConfigMapOfRegisterInfo(
 		username, request.DeviceStateRegisterInfos, request.DeviceConfigRegisterInfos)
 	if err != nil {
-		return "", err
+		return "", errors.Newf(
+			500, "Register_Error",
+			"创建用户对应的k8s资源时发生了错误:%v", err,
+		)
 	}
 
 	// 利用协程部署数据收集和数据处理服务
@@ -137,17 +146,26 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 	})
 	err = eg.Wait()
 	if err != nil {
-		return "", err
+		return "", errors.Newf(
+			500, "Register_Error",
+			"创建用户服务相应的运行容器时发生了错误:%v", err,
+		)
 	}
 
 	// 为部署的服务向网关创建外部的路由
 	err = u.gateway.CreateDcServiceRoute(username, dcService)
 	if err != nil {
-		return "", err
+		return "", errors.Newf(
+			500, "Register_Error",
+			"创建用户服务相应的路由时发生了错误:%v", err,
+		)
 	}
 	err = u.gateway.CreateDpServiceRoute(username, dpService)
 	if err != nil {
-		return "", err
+		return "", errors.Newf(
+			500, "Register_Error",
+			"创建用户服务相应的路由时发生了错误:%v", err,
+		)
 	}
 
 	return
@@ -158,7 +176,8 @@ func (u *UserUsecase) Unregister(username, password string) error {
 	// 确认密码是否正确，确保是用户本人操作的注销
 	_, err := u.repo.Login(username, password)
 	if err != nil {
-		return errors.Forbidden("", "")
+		return errors.Forbidden(
+			"UnRegister_Error", "账号或密码错误，无法执行注销操作")
 	}
 
 	return u.clear(username)
