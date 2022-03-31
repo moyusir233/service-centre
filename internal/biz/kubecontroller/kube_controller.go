@@ -456,25 +456,6 @@ func getDataCollectionStatefulSetSpec(
 								Name:  pointer.String("USERNAME"),
 								Value: pointer.String(option.Username),
 							},
-							{
-								// pod用于向kong网关注册服务时使用的名称
-								Name: pointer.String("SERVICE_NAME"),
-								ValueFrom: &client_corev1.EnvVarSourceApplyConfiguration{
-									FieldRef: &client_corev1.ObjectFieldSelectorApplyConfiguration{
-										FieldPath: pointer.String("metadata.name"),
-									},
-								},
-							},
-							{
-								// statefulSet使用的headless service的名称，用于给pod组建域名
-								Name:  pointer.String("HEADLESS_SERVICE_NAME"),
-								Value: pointer.String(headlessServiceName),
-							},
-							{
-								// 项目使用的域名，用于服务向网关注册路由时，增加Host请求头的匹配规则
-								Name:  pointer.String("APP_DOMAIN_NAME"),
-								Value: pointer.String(option.AppDomainName),
-							},
 						},
 						Ports: []client_corev1.ContainerPortApplyConfiguration{
 							{
