@@ -68,6 +68,8 @@ func (u *UserUsecase) Login(username, password string) (token string, err error)
 // 然后进行生成服务代码，为服务代码创建相应的configMap，然后启动相应的service和deployment，
 // 最后在网关创建服务、路由以及认证插件
 func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err error) {
+	u.logger.Infof("接收到了用户 %v 的注册请求", request.User.Id)
+
 	if request == nil {
 		return "", errors.BadRequest("request is nil", "")
 	}
@@ -77,6 +79,8 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 		if err != nil {
 			// 注册失败时，需要清理掉创建的无效资源
 			u.clear(username)
+		} else {
+			u.logger.Infof("完成了用户 %v 的注册请求", request.User.Id)
 		}
 	}()
 	// 在网关创建用户对应的consumer，从而创建token
@@ -173,6 +177,8 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 
 // Unregister 注销用户，清理用户相关的资源，包括网关组件、k8s资源以及数据库的记录
 func (u *UserUsecase) Unregister(username, password string) error {
+	u.logger.Infof("接收到了用户 %v 的注销请求", username)
+
 	// 确认密码是否正确，确保是用户本人操作的注销
 	_, err := u.repo.Login(username, password)
 	if err != nil {
@@ -180,7 +186,16 @@ func (u *UserUsecase) Unregister(username, password string) error {
 			"UnRegister_Error", "账号或密码错误，无法执行注销操作")
 	}
 
-	return u.clear(username)
+	err = u.clear(username)
+	if err != nil {
+		return errors.Newf(
+			500,
+			"UnRegister_Error",
+			"为用户清理使用的系统资源时发生了错误:%v", err)
+	}
+
+	u.logger.Infof("完成了用户 %v 的注销请求", username)
+	return nil
 }
 
 func (u *UserUsecase) GetClientCode(username string) ([]byte, error) {

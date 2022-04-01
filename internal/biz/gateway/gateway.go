@@ -135,7 +135,7 @@ func (m *Manager) CreateDcServiceRoute(username string, service *corev1.Service)
 	objects = append(objects, route)
 
 	configUpdateRouteCreateOption := &kong.RouteCreateOption{
-		Name:      service.Name,
+		Name:      configUpdateSvcName,
 		Protocols: []string{"http"},
 		Methods:   []string{http.MethodPost},
 		Hosts:     []string{m.AppDomainName},
