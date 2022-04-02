@@ -55,11 +55,11 @@ func (m *Manager) CreateDcServiceRoute(username string, service *corev1.Service)
 	}
 	// 为数据收集服务的grpc连接创建路由
 	// 查询service提供grpc的端口，默认为9000
-	var gprcPort int32 = 9000
+	var grpcPort int32 = 9000
 	var httpPort int32 = 8000
 	for _, p := range service.Spec.Ports {
 		if p.Name == "grpc" {
-			gprcPort = p.Port
+			grpcPort = p.Port
 		} else if p.Name == "http" {
 			httpPort = p.Port
 		}
@@ -83,7 +83,7 @@ func (m *Manager) CreateDcServiceRoute(username string, service *corev1.Service)
 		Protocol: "grpc",
 		// k8s中服务名即相应的域名
 		Host:         service.Name,
-		Port:         int(gprcPort),
+		Port:         int(grpcPort),
 		Enabled:      true,
 		WriteTimeout: 600000,
 		ReadTimeout:  600000,
@@ -141,7 +141,7 @@ func (m *Manager) CreateDcServiceRoute(username string, service *corev1.Service)
 		Hosts:     []string{m.AppDomainName},
 		Paths:     []string{"/"},
 		Headers: map[string][]string{
-			"X-Service-Type": {username + "-dc"},
+			"X-Service-Type": {username + "-dc-config-update"},
 		},
 		StripPath: false,
 		Service: &struct {
@@ -235,11 +235,13 @@ func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service)
 	routeCreateOption := &kong.RouteCreateOption{
 		Name:      service.Name,
 		Protocols: []string{"http"},
+		Methods:   []string{http.MethodGet},
 		Hosts:     []string{m.AppDomainName},
 		Paths:     []string{"/"},
 		Headers: map[string][]string{
 			"X-Service-Type": {username + "-dp"},
 		},
+		StripPath: false,
 		Service: &struct {
 			Name string `json:"name,omitempty"`
 			Id   string `json:"id,omitempty"`
