@@ -212,6 +212,19 @@ func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service)
 			break
 		}
 	}
+
+	var (
+		objects []kong.Object
+		err     error
+	)
+	defer func() {
+		if err != nil {
+			for _, o := range objects {
+				m.Delete(o)
+			}
+		}
+	}()
+
 	// 配置kong service组件的创建选项，需要附上用户名的tag方便后续用户注销
 	serviceCreateOption := &kong.ServiceCreateOption{
 		Name:     service.Name,
@@ -229,6 +242,7 @@ func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service)
 	if err != nil {
 		return err
 	}
+	objects = append(objects, svc)
 
 	// 创建路由，路由匹配条件包括host请求头和X-Service-Type:<用户名>-dp，
 	// tag部分需要附上用户名，方便后续用户注销
@@ -250,9 +264,30 @@ func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service)
 	}
 	route, err := m.Create(routeCreateOption)
 	if err != nil {
-		m.Delete(svc)
 		return err
 	}
+	objects = append(objects, route)
+
+	// 由于浏览器发起ws连接时无法添加请求头，
+	// 因此需要为建立预警推送ws连接的服务额外增加一个基于path匹配的路由
+	wsRouteCreateOption := &kong.RouteCreateOption{
+		Name:      service.Name,
+		Protocols: []string{"http"},
+		Methods:   []string{http.MethodGet},
+		Hosts:     []string{m.AppDomainName},
+		Paths:     []string{"/warnings/push"},
+		StripPath: false,
+		Service: &struct {
+			Name string `json:"name,omitempty"`
+			Id   string `json:"id,omitempty"`
+		}{Name: service.Name},
+		Tags: []string{username},
+	}
+	wsRoute, err := m.Create(wsRouteCreateOption)
+	if err != nil {
+		return err
+	}
+	objects = append(objects, wsRoute)
 
 	// 创建认证插件，要求外部的http请求在query或者header中添加注册时得到的X-Api-Key
 	pluginCreateOption := &kong.KeyAuthPluginCreateOption{
@@ -270,8 +305,6 @@ func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service)
 	}
 	_, err = m.Create(pluginCreateOption)
 	if err != nil {
-		m.Delete(route)
-		m.Delete(svc)
 		return err
 	}
 
