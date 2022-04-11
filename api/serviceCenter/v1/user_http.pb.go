@@ -20,6 +20,7 @@ const _ = http.SupportPackageIsVersion1
 
 type UserHTTPServer interface {
 	DownloadClientCode(context.Context, *DownloadClientCodeRequest) (*File, error)
+	GetRegisterInfo(context.Context, *GetRegisterInfoRequest) (*GetRegisterInfoReply, error)
 	Login(context.Context, *v1.User) (*LoginReply, error)
 	Register(context.Context, *RegisterRequest) (*RegisterReply, error)
 	Unregister(context.Context, *v1.User) (*UnregisterReply, error)
@@ -28,6 +29,7 @@ type UserHTTPServer interface {
 func RegisterUserHTTPServer(s *http.Server, srv UserHTTPServer) {
 	r := s.Route("/")
 	r.POST("/users", _User_Register0_HTTP_Handler(srv))
+	r.GET("/users/register-info/{username}", _User_GetRegisterInfo0_HTTP_Handler(srv))
 	r.GET("/users", _User_Login0_HTTP_Handler(srv))
 	r.DELETE("/users", _User_Unregister0_HTTP_Handler(srv))
 	r.GET("/users/client-code/{username}", _User_DownloadClientCode0_HTTP_Handler(srv))
@@ -48,6 +50,28 @@ func _User_Register0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) err
 			return err
 		}
 		reply := out.(*RegisterReply)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _User_GetRegisterInfo0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetRegisterInfoRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, "/api.serviceCentre.v1.User/GetRegisterInfo")
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetRegisterInfo(ctx, req.(*GetRegisterInfoRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*GetRegisterInfoReply)
 		return ctx.Result(200, reply)
 	}
 }
@@ -114,6 +138,7 @@ func _User_DownloadClientCode0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Co
 
 type UserHTTPClient interface {
 	DownloadClientCode(ctx context.Context, req *DownloadClientCodeRequest, opts ...http.CallOption) (rsp *File, err error)
+	GetRegisterInfo(ctx context.Context, req *GetRegisterInfoRequest, opts ...http.CallOption) (rsp *GetRegisterInfoReply, err error)
 	Login(ctx context.Context, req *v1.User, opts ...http.CallOption) (rsp *LoginReply, err error)
 	Register(ctx context.Context, req *RegisterRequest, opts ...http.CallOption) (rsp *RegisterReply, err error)
 	Unregister(ctx context.Context, req *v1.User, opts ...http.CallOption) (rsp *UnregisterReply, err error)
@@ -132,6 +157,19 @@ func (c *UserHTTPClientImpl) DownloadClientCode(ctx context.Context, in *Downloa
 	pattern := "/users/client-code/{username}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation("/api.serviceCentre.v1.User/DownloadClientCode"))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, err
+}
+
+func (c *UserHTTPClientImpl) GetRegisterInfo(ctx context.Context, in *GetRegisterInfoRequest, opts ...http.CallOption) (*GetRegisterInfoReply, error) {
+	var out GetRegisterInfoReply
+	pattern := "/users/register-info/{username}"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation("/api.serviceCentre.v1.User/GetRegisterInfo"))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {

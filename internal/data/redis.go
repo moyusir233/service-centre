@@ -2,7 +2,7 @@ package data
 
 import (
 	"context"
-	"fmt"
+	"encoding/hex"
 	"gitee.com/moyusir/service-centre/internal/biz"
 	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-redis/redis/v8"
@@ -15,6 +15,8 @@ const (
 	TOKENS_KEY = "tokens"
 	// CLIENT_CODE_KEY 用户客户端代码hash的key
 	CLIENT_CODE_KEY = "client_code"
+	// REGISTER_INFO_KEY 用户注册信息hash的key
+	REGISTER_INFO_KEY = "register_info"
 )
 
 // RedisRepo redis数据库操作对象，可以理解为dao
@@ -50,17 +52,18 @@ func (r *RedisRepo) Login(username, password string) (token string, err error) {
 }
 
 // Register 用户注册，并保存用户token
-func (r *RedisRepo) Register(username, password, token string) error {
+func (r *RedisRepo) Register(username, password, token string, info []byte) error {
 	// 保存用户密码以及token，利用事务保证一并执行
 	cmders, err := r.client.TxPipelined(context.Background(), func(p redis.Pipeliner) error {
 		p.HSetNX(context.Background(), PSWS_KEY, username, password)
 		p.HSetNX(context.Background(), TOKENS_KEY, username, token)
+		p.HSetNX(context.Background(), REGISTER_INFO_KEY, username, hex.EncodeToString(info))
 		return nil
 	})
 	if err != nil {
 		return errors.Newf(
 			500, "Repo_Error",
-			"将用户信息保存到redis时发生了错误:%v",err)
+			"将用户信息保存到redis时发生了错误:%v", err)
 	}
 
 	// 检查结果
@@ -68,7 +71,7 @@ func (r *RedisRepo) Register(username, password, token string) error {
 		if cmder.Err() != nil {
 			return errors.Newf(
 				500, "Repo_Error",
-				"将用户信息保存到redis时发生了错误:%v",cmder.Err())
+				"将用户信息保存到redis时发生了错误:%v", cmder.Err())
 		} else if !cmder.(*redis.BoolCmd).Val() {
 			return errors.New(400, "Repo_Error", "用户账号已经存在")
 		}
@@ -77,13 +80,33 @@ func (r *RedisRepo) Register(username, password, token string) error {
 	return nil
 }
 
+// GetRegisterInfo 获取用户注册信息
+func (r *RedisRepo) GetRegisterInfo(username string) ([]byte, error) {
+	result, err := r.client.HGet(context.Background(), REGISTER_INFO_KEY, username).Result()
+	if err != nil {
+		return nil, errors.Newf(
+			500, "Repo_Error",
+			"获得用户注册信息时发生了错误:%v", err)
+	}
+
+	decodeString, err := hex.DecodeString(result)
+	if err != nil {
+		return nil, errors.Newf(
+			500, "Repo_Error",
+			"解码用户注册信息时发生了错误:%v", err)
+	}
+
+	return decodeString, nil
+}
+
 // UnRegister 注销账户，清除用户相关的所有redis key
 func (r *RedisRepo) UnRegister(username string) error {
 	// 利用事务保证全部删除完毕
 	cmders, err := r.client.TxPipelined(context.Background(), func(p redis.Pipeliner) error {
-		// 删除密码和token以及客户端代码
+		// 删除密码和token、注册信息以及客户端代码
 		p.HDel(context.Background(), PSWS_KEY, username)
 		p.HDel(context.Background(), TOKENS_KEY, username)
+		p.HDel(context.Background(), REGISTER_INFO_KEY, username)
 		p.HDel(context.Background(), CLIENT_CODE_KEY, username)
 
 		// 获得然后删除和用户相关的键，包括设备配置信息、状态信息、警告信息等
@@ -97,14 +120,14 @@ func (r *RedisRepo) UnRegister(username string) error {
 	if err != nil {
 		return errors.Newf(
 			500, "Repo_Error",
-			"删除用户信息时发生了错误:%v",err)
+			"删除用户信息时发生了错误:%v", err)
 	}
 
 	for _, cmder := range cmders {
 		if cmder.Err() != nil {
 			return errors.Newf(
 				500, "Repo_Error",
-				"删除用户信息时发生了错误:%v",cmder.Err())
+				"删除用户信息时发生了错误:%v", cmder.Err())
 		}
 	}
 
@@ -120,12 +143,11 @@ func (r *RedisRepo) GetClientCode(username string) ([]byte, error) {
 			"客户相应的客户端代码不存在")
 	}
 
-	var ret []byte
-	_, err = fmt.Sscanf(result, "%x", &ret)
+	ret, err := hex.DecodeString(result)
 	if err != nil {
 		return nil, errors.Newf(
 			500, "Repo_Error",
-			"将客户代码转换为二进制信息时发生了错误:%v",err)
+			"将客户代码转换为二进制信息时发生了错误:%v", err)
 	}
 
 	return ret, nil

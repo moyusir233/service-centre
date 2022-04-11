@@ -25,6 +25,8 @@ const _ = grpc.SupportPackageIsVersion7
 type UserClient interface {
 	// 用户注册服务，一次性注册用户信息、配置信息、设备状态信息以及预警规则
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterReply, error)
+	// 获得用户注册时的所有配置信息
+	GetRegisterInfo(ctx context.Context, in *GetRegisterInfoRequest, opts ...grpc.CallOption) (*GetRegisterInfoReply, error)
 	// 用户登录验证
 	Login(ctx context.Context, in *v1.User, opts ...grpc.CallOption) (*LoginReply, error)
 	// 用户注销
@@ -44,6 +46,15 @@ func NewUserClient(cc grpc.ClientConnInterface) UserClient {
 func (c *userClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterReply, error) {
 	out := new(RegisterReply)
 	err := c.cc.Invoke(ctx, "/api.serviceCentre.v1.User/Register", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userClient) GetRegisterInfo(ctx context.Context, in *GetRegisterInfoRequest, opts ...grpc.CallOption) (*GetRegisterInfoReply, error) {
+	out := new(GetRegisterInfoReply)
+	err := c.cc.Invoke(ctx, "/api.serviceCentre.v1.User/GetRegisterInfo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +94,8 @@ func (c *userClient) DownloadClientCode(ctx context.Context, in *DownloadClientC
 type UserServer interface {
 	// 用户注册服务，一次性注册用户信息、配置信息、设备状态信息以及预警规则
 	Register(context.Context, *RegisterRequest) (*RegisterReply, error)
+	// 获得用户注册时的所有配置信息
+	GetRegisterInfo(context.Context, *GetRegisterInfoRequest) (*GetRegisterInfoReply, error)
 	// 用户登录验证
 	Login(context.Context, *v1.User) (*LoginReply, error)
 	// 用户注销
@@ -98,6 +111,9 @@ type UnimplementedUserServer struct {
 
 func (UnimplementedUserServer) Register(context.Context, *RegisterRequest) (*RegisterReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+}
+func (UnimplementedUserServer) GetRegisterInfo(context.Context, *GetRegisterInfoRequest) (*GetRegisterInfoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRegisterInfo not implemented")
 }
 func (UnimplementedUserServer) Login(context.Context, *v1.User) (*LoginReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
@@ -135,6 +151,24 @@ func _User_Register_Handler(srv interface{}, ctx context.Context, dec func(inter
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServer).Register(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _User_GetRegisterInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRegisterInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).GetRegisterInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.serviceCentre.v1.User/GetRegisterInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).GetRegisterInfo(ctx, req.(*GetRegisterInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -203,6 +237,10 @@ var User_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _User_Register_Handler,
+		},
+		{
+			MethodName: "GetRegisterInfo",
+			Handler:    _User_GetRegisterInfo_Handler,
 		},
 		{
 			MethodName: "Login",

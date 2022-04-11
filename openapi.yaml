@@ -82,6 +82,22 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/File'
+    /users/register-info/{username}:
+        get:
+            summary: 获得用户注册时的所有配置信息
+            operationId: User_GetRegisterInfo
+            parameters:
+                - name: username
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetRegisterInfoReply'
 components:
     schemas:
         DeviceConfigRegisterInfo:
@@ -106,6 +122,21 @@ components:
                     format: bytes
                 name:
                     type: string
+        GetRegisterInfoReply:
+            properties:
+                user:
+                    $ref: '#/components/schemas/User'
+                device_config_register_infos:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DeviceConfigRegisterInfo'
+                    description: 配置注册信息
+                device_state_register_infos:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DeviceStateRegisterInfo'
+                    description: 设备状态及预警规则注册信息
+            description: 获得用户注册时的所有配置信息的响应
         LoginReply:
             properties:
                 success:

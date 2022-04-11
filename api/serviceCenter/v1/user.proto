@@ -19,6 +19,12 @@ service User {
             body: "*"
         };
     };
+    // 获得用户注册时的所有配置信息
+    rpc GetRegisterInfo(GetRegisterInfoRequest) returns (GetRegisterInfoReply) {
+        option (google.api.http) = {
+            get: "/users/register-info/{username}"
+        };
+    };
     // 用户登录验证
     rpc Login(api.util.v1.User) returns (LoginReply) {
         option (google.api.http) = {
@@ -53,6 +59,20 @@ message RegisterReply {
     bool success = 1;
     // 用户的token
     string token = 2;
+}
+
+// 获得用户注册时的所有配置信息的请求
+message GetRegisterInfoRequest{
+    string username = 1;
+}
+// 获得用户注册时的所有配置信息的响应
+message GetRegisterInfoReply{
+    // 用户注册信息
+    api.util.v1.User user = 1;
+    // 配置注册信息
+    repeated api.util.v1.DeviceConfigRegisterInfo device_config_register_infos = 2;
+    // 设备状态及预警规则注册信息
+    repeated api.util.v1.DeviceStateRegisterInfo device_state_register_infos = 3;
 }
 
 // 登录响应

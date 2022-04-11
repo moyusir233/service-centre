@@ -9,6 +9,7 @@ import (
 	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/proto"
 	corev1 "k8s.io/api/core/v1"
 	"time"
 )
@@ -24,8 +25,10 @@ type UserUsecase struct {
 type UserRepo interface {
 	// Login 用户登录
 	Login(username, password string) (token string, err error)
-	// Register 用户注册
-	Register(username, password, token string) error
+	// Register 用户注册，并保存用户信息
+	Register(username, password, token string, registerInfo []byte) error
+	// GetRegisterInfo 获取用户注册信息
+	GetRegisterInfo(username string) ([]byte, error)
 	// UnRegister 用户注销
 	UnRegister(username string) error
 	// GetClientCode 获得生成的客户端代码
@@ -93,7 +96,14 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 	}
 
 	// 往数据库中保存用户信息
-	err = u.repo.Register(username, request.User.Password, token)
+	marshal, err := proto.Marshal(request)
+	if err != nil {
+		return "", errors.Newf(
+			500, "Register_Error",
+			"对用户注册信息进行protobuf序列化时发生了错误:%v", err,
+		)
+	}
+	err = u.repo.Register(username, request.User.Password, token, marshal)
 	if err != nil {
 		return "", err
 	}
@@ -173,6 +183,23 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 	}
 
 	return
+}
+
+// GetUserRegisterInfo 获得用户注册信息，并解码到给定的proto message中
+func (u *UserUsecase) GetUserRegisterInfo(username string, message proto.Message) error {
+	registerInfo, err := u.repo.GetRegisterInfo(username)
+	if err != nil {
+		return err
+	}
+
+	err = proto.Unmarshal(registerInfo, message)
+	if err != nil {
+		return errors.Newf(
+			500, "Get_RegisterInfo_Error",
+			"对用户注册信息进行protobuf解码时发生了错误:%v", err)
+	}
+
+	return nil
 }
 
 // Unregister 注销用户，清理用户相关的资源，包括网关组件、k8s资源以及数据库的记录

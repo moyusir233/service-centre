@@ -28,6 +28,17 @@ func (s *UserService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 		Token:   token,
 	}, nil
 }
+
+func (s *UserService) GetRegisterInfo(ctx context.Context, req *pb.GetRegisterInfoRequest) (*pb.GetRegisterInfoReply, error) {
+	reply := &pb.GetRegisterInfoReply{}
+	err := s.uc.GetUserRegisterInfo(req.Username, reply)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
+}
+
 func (s *UserService) Login(ctx context.Context, req *utilApi.User) (*pb.LoginReply, error) {
 	token, err := s.uc.Login(req.Id, req.Password)
 	if err != nil {
