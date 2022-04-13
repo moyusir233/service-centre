@@ -249,7 +249,7 @@ func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service)
 	routeCreateOption := &kong.RouteCreateOption{
 		Name:      service.Name,
 		Protocols: []string{"http"},
-		Methods:   []string{http.MethodGet},
+		Methods:   []string{http.MethodGet, http.MethodPut, http.MethodDelete},
 		Hosts:     []string{m.AppDomainName},
 		Paths:     []string{"/"},
 		Headers: map[string][]string{
@@ -271,7 +271,7 @@ func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service)
 	// 由于浏览器发起ws连接时无法添加请求头，
 	// 因此需要为建立预警推送ws连接的服务额外增加一个基于path匹配的路由
 	wsRouteCreateOption := &kong.RouteCreateOption{
-		Name:      service.Name,
+		Name:      service.Name + "-warning-push",
 		Protocols: []string{"http"},
 		Methods:   []string{http.MethodGet},
 		Hosts:     []string{m.AppDomainName},
