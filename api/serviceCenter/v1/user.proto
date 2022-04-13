@@ -22,7 +22,7 @@ service User {
     // 获得用户注册时的所有配置信息
     rpc GetRegisterInfo(GetRegisterInfoRequest) returns (GetRegisterInfoReply) {
         option (google.api.http) = {
-            get: "/users/register-info/{username}"
+            get: "/users/register-info/{token}"
         };
     };
     // 用户登录验证
@@ -63,7 +63,7 @@ message RegisterReply {
 
 // 获得用户注册时的所有配置信息的请求
 message GetRegisterInfoRequest{
-    string username = 1;
+    string token = 1;
 }
 // 获得用户注册时的所有配置信息的响应
 message GetRegisterInfoReply{

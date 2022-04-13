@@ -186,7 +186,13 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 }
 
 // GetUserRegisterInfo 获得用户注册信息，并解码到给定的proto message中
-func (u *UserUsecase) GetUserRegisterInfo(username string, message proto.Message) error {
+func (u *UserUsecase) GetUserRegisterInfo(token string, message proto.Message) error {
+	// 由token信息先获得用户id，再利用用户id查询用户注册信息
+	username, err := u.gateway.GetUsernameOfToken(token)
+	if err != nil {
+		return err
+	}
+
 	registerInfo, err := u.repo.GetRegisterInfo(username)
 	if err != nil {
 		return err

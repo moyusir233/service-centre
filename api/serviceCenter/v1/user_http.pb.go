@@ -29,7 +29,7 @@ type UserHTTPServer interface {
 func RegisterUserHTTPServer(s *http.Server, srv UserHTTPServer) {
 	r := s.Route("/")
 	r.POST("/users", _User_Register0_HTTP_Handler(srv))
-	r.GET("/users/register-info/{username}", _User_GetRegisterInfo0_HTTP_Handler(srv))
+	r.GET("/users/register-info/{token}", _User_GetRegisterInfo0_HTTP_Handler(srv))
 	r.GET("/users", _User_Login0_HTTP_Handler(srv))
 	r.DELETE("/users", _User_Unregister0_HTTP_Handler(srv))
 	r.GET("/users/client-code/{username}", _User_DownloadClientCode0_HTTP_Handler(srv))
@@ -167,7 +167,7 @@ func (c *UserHTTPClientImpl) DownloadClientCode(ctx context.Context, in *Downloa
 
 func (c *UserHTTPClientImpl) GetRegisterInfo(ctx context.Context, in *GetRegisterInfoRequest, opts ...http.CallOption) (*GetRegisterInfoReply, error) {
 	var out GetRegisterInfoReply
-	pattern := "/users/register-info/{username}"
+	pattern := "/users/register-info/{token}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation("/api.serviceCentre.v1.User/GetRegisterInfo"))
 	opts = append(opts, http.PathTemplate(pattern))

@@ -31,7 +31,7 @@ func (s *UserService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 
 func (s *UserService) GetRegisterInfo(ctx context.Context, req *pb.GetRegisterInfoRequest) (*pb.GetRegisterInfoReply, error) {
 	reply := &pb.GetRegisterInfoReply{}
-	err := s.uc.GetUserRegisterInfo(req.Username, reply)
+	err := s.uc.GetUserRegisterInfo(req.Token, reply)
 	if err != nil {
 		return nil, err
 	}

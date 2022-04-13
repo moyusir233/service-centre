@@ -310,3 +310,29 @@ func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service)
 
 	return nil
 }
+
+// GetUsernameOfToken 获得与token相关的用户名
+func (m *Manager) GetUsernameOfToken(token string) (string, error) {
+	result := &struct {
+		Username string `json:"username"`
+	}{}
+
+	response, err := m.Client.R().
+		SetPathParam("token", token).
+		SetResult(result).
+		Get("/key-auths/{token}/consumer")
+	if err != nil {
+		return "", errors.Newf(500, "获得token相关的用户名时发生了错误: %s", err.Error())
+	}
+	if response.IsError() {
+		return "", errors.Newf(
+			500, "获得token相关的用户名时发生了错误: %s", response.String())
+	}
+
+	if result.Username == "" {
+		return "", errors.Newf(
+			400, "与该token相关的用户不存在: %s", token)
+	}
+
+	return result.Username, nil
+}

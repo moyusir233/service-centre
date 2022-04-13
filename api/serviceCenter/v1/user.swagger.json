@@ -153,6 +153,37 @@
           "User"
         ]
       }
+    },
+    "/users/register-info/{username}": {
+      "get": {
+        "summary": "获得用户注册时的所有配置信息",
+        "operationId": "User_GetRegisterInfo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRegisterInfoReply"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "User"
+        ]
+      }
     }
   },
   "definitions": {
@@ -320,6 +351,30 @@
           "type": "string"
         }
       }
+    },
+    "v1GetRegisterInfoReply": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User",
+          "title": "用户注册信息"
+        },
+        "device_config_register_infos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1DeviceConfigRegisterInfo"
+          },
+          "title": "配置注册信息"
+        },
+        "device_state_register_infos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1DeviceStateRegisterInfo"
+          },
+          "title": "设备状态及预警规则注册信息"
+        }
+      },
+      "title": "获得用户注册时的所有配置信息的响应"
     },
     "v1LoginReply": {
       "type": "object",

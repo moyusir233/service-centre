@@ -82,12 +82,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/File'
-    /users/register-info/{username}:
+    /users/register-info/{token}:
         get:
             summary: 获得用户注册时的所有配置信息
             operationId: User_GetRegisterInfo
             parameters:
-                - name: username
+                - name: token
                   in: query
                   schema:
                     type: string
