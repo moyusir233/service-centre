@@ -5,6 +5,7 @@ import (
 	"github.com/go-kratos/kratos/v2/errors"
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
+	"strings"
 )
 
 type Manager struct {
@@ -275,7 +276,7 @@ func (m *Manager) CreateDpServiceRoute(username string, service *corev1.Service)
 		Protocols: []string{"http"},
 		Methods:   []string{http.MethodGet},
 		Hosts:     []string{m.AppDomainName},
-		Paths:     []string{"/warnings/push"},
+		Paths:     []string{"/warnings/push/" + strings.Replace(username, "_", "-", -1)},
 		StripPath: false,
 		Service: &struct {
 			Name string `json:"name,omitempty"`
