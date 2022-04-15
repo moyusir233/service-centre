@@ -95,19 +95,6 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 		)
 	}
 
-	// 往数据库中保存用户信息
-	marshal, err := proto.Marshal(request)
-	if err != nil {
-		return "", errors.Newf(
-			500, "Register_Error",
-			"对用户注册信息进行protobuf序列化时发生了错误:%v", err,
-		)
-	}
-	err = u.repo.Register(username, request.User.Password, token, marshal)
-	if err != nil {
-		return "", err
-	}
-
 	// 创建保存用户设备状态信息的influxdb bucket
 	err = u.influxdbClient.CreateBucket(username)
 	if err != nil {
@@ -180,6 +167,19 @@ func (u *UserUsecase) Register(request *v1.RegisterRequest) (token string, err e
 			500, "Register_Error",
 			"创建用户服务相应的路由时发生了错误:%v", err,
 		)
+	}
+
+	// 最后往数据库中保存用户信息，避免出现服务还未初始化用户就可以登录网页
+	marshal, err := proto.Marshal(request)
+	if err != nil {
+		return "", errors.Newf(
+			500, "Register_Error",
+			"对用户注册信息进行protobuf序列化时发生了错误:%v", err,
+		)
+	}
+	err = u.repo.Register(username, request.User.Password, token, marshal)
+	if err != nil {
+		return "", err
 	}
 
 	return
