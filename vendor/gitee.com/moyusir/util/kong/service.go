@@ -50,6 +50,8 @@ type ServiceCreateOption struct {
 	WriteTimeout int `json:"write_timeout,omitempty"`
 	// 向上游服务器发送请求的两次连续读操作之间的超时（以毫秒为单位）。默认值：60000。
 	ReadTimeout int `json:"read_timeout,omitempty"`
+	// 与上游服务器的连接超时（以毫秒为单位）。默认值：60000。
+	ConnectTimeout int `json:"connect_timeout,omitempty"`
 	// 一次设置协议、主机、端口和路径的简写属性。
 	Url string `json:"url,omitempty"`
 	// tag

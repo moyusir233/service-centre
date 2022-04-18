@@ -119,6 +119,8 @@ message Warning {
   // 告警出现的时间范围，要求不能为空
   google.protobuf.Timestamp start = 5[(validate.rules).timestamp.required = true];
   google.protobuf.Timestamp end = 6[(validate.rules).timestamp.required = true];
+  // 标志警告信息是否已经处理的标志位
+  bool processed = 7;
 }
 // 测试中使用的设备状态信息和设备配置信息
 message TestedDeviceConfig {

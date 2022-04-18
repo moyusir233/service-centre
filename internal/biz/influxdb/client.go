@@ -38,6 +38,7 @@ func (c *Client) CreateBucket(username string) error {
 		fmt.Sprintf("%s-warning_detect", username): int64(24 * time.Hour.Seconds()),
 		fmt.Sprintf("%s-warnings", username):       int64(720 * time.Hour.Seconds()),
 	}
+	var shardGroupDurationSeconds int64 = 0
 
 	var err error
 	defer func() {
@@ -52,8 +53,9 @@ func (c *Client) CreateBucket(username string) error {
 			c.orgID,
 			bucket,
 			domain.RetentionRule{
-				EverySeconds: seconds,
-				Type:         "expire",
+				EverySeconds:              seconds,
+				ShardGroupDurationSeconds: &shardGroupDurationSeconds,
+				Type:                      "expire",
 			},
 		)
 		if err != nil {

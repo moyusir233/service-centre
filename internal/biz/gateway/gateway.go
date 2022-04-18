@@ -83,12 +83,13 @@ func (m *Manager) CreateDcServiceRoute(username string, service *corev1.Service)
 		Name:     service.Name,
 		Protocol: "grpc",
 		// k8s中服务名即相应的域名
-		Host:         service.Name,
-		Port:         int(grpcPort),
-		Enabled:      true,
-		WriteTimeout: 600000,
-		ReadTimeout:  600000,
-		Tags:         []string{username},
+		Host:           service.Name,
+		Port:           int(grpcPort),
+		Enabled:        true,
+		WriteTimeout:   600000,
+		ReadTimeout:    600000,
+		ConnectTimeout: 600000,
+		Tags:           []string{username},
 	}
 	svc, err := m.Create(serviceCreateOption)
 	if err != nil {
