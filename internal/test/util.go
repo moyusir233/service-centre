@@ -33,12 +33,13 @@ func newApp(logger log.Logger, hs *http.Server) *kratos.App {
 	)
 }
 func StartServiceCenterServer(t *testing.T) v1.UserHTTPClient {
-	bootstrap, err := conf.LoadConfig("../../configs/config.yaml")
+	logger := log.NewStdLogger(os.Stdout)
+	bootstrap, err := conf.LoadConfig("../../configs/config.yaml", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	app, cleanUp, err := initApp(bootstrap.Server, bootstrap.Data, log.NewStdLogger(os.Stdout))
+	app, cleanUp, err := initApp(bootstrap.Server, bootstrap.Data, logger)
 	if err != nil {
 		t.Fatal(err)
 	}

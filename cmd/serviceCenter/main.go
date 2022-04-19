@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"gitee.com/moyusir/service-centre/internal/conf"
+	util "gitee.com/moyusir/util/logger"
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/transport/http"
@@ -41,15 +42,16 @@ func newApp(logger log.Logger, hs *http.Server) *kratos.App {
 
 func main() {
 	flag.Parse()
-	logger := log.With(log.NewStdLogger(os.Stdout),
-		"ts", log.DefaultTimestamp,
-		"caller", log.DefaultCaller,
-		"service.id", id,
-		"service.name", Name,
-	)
+	logger := util.NewJsonZapLoggerWarpper(Name)
+	//logger := log.With(log.NewStdLogger(os.Stdout),
+	//	"ts", log.DefaultTimestamp,
+	//	"caller", log.DefaultCaller,
+	//	"service.id", id,
+	//	"service.name", Name,
+	//)
 	helper := log.NewHelper(logger)
 
-	bc, err := conf.LoadConfig(flagconf)
+	bc, err := conf.LoadConfig(flagconf, logger)
 	if err != nil {
 		helper.Fatalf("导入配置时发生了错误:%v", err)
 	}
