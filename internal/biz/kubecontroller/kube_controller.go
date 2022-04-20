@@ -184,6 +184,8 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 		restartPolicy   = corev1.RestartPolicyAlways
 		servicePort     = intstr.FromInt(8000)
 	)
+	// 解析json日志所需注解的前缀
+	prefix := fmt.Sprintf("co.elastic.logs.%s/", name)
 
 	return &client_appsv1.DeploymentSpecApplyConfiguration{
 		// 配置部署的副本数量和selector
@@ -198,6 +200,12 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 			ObjectMetaApplyConfiguration: &client_metav1.ObjectMetaApplyConfiguration{
 				Name:   &name,
 				Labels: label,
+				Annotations: map[string]string{
+					prefix + "json.keys_under_root": "true",
+					prefix + "json.add_error_key":   "true",
+					prefix + "json.message_key":     "msg",
+					prefix + "json.expand_keys":     "true",
+				},
 			},
 			Spec: &client_corev1.PodSpecApplyConfiguration{
 				// 配置需要挂载的volume
@@ -352,6 +360,8 @@ func getDataCollectionStatefulSetSpec(
 		restartPolicy   = corev1.RestartPolicyAlways
 		servicePort     = intstr.FromInt(8000)
 	)
+	// 解析json日志所需注解的前缀
+	prefix := fmt.Sprintf("co.elastic.logs.%s/", name)
 
 	return &client_appsv1.StatefulSetSpecApplyConfiguration{
 		// 配置部署的副本数量和selector
@@ -366,6 +376,12 @@ func getDataCollectionStatefulSetSpec(
 			ObjectMetaApplyConfiguration: &client_metav1.ObjectMetaApplyConfiguration{
 				Name:   &name,
 				Labels: label,
+				Annotations: map[string]string{
+					prefix + "json.keys_under_root": "true",
+					prefix + "json.add_error_key":   "true",
+					prefix + "json.message_key":     "msg",
+					prefix + "json.expand_keys":     "true",
+				},
 			},
 			Spec: &client_corev1.PodSpecApplyConfiguration{
 				// 配置需要挂载的volume
