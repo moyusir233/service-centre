@@ -203,7 +203,7 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 				Annotations: map[string]string{
 					prefix + "json.keys_under_root": "true",
 					prefix + "json.add_error_key":   "true",
-					prefix + "json.message_key":     "msg",
+					prefix + "json.message_key":     "message",
 					prefix + "json.expand_keys":     "true",
 				},
 			},
@@ -379,7 +379,7 @@ func getDataCollectionStatefulSetSpec(
 				Annotations: map[string]string{
 					prefix + "json.keys_under_root": "true",
 					prefix + "json.add_error_key":   "true",
-					prefix + "json.message_key":     "msg",
+					prefix + "json.message_key":     "message",
 					prefix + "json.expand_keys":     "true",
 				},
 			},
