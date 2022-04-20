@@ -185,7 +185,14 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 		servicePort     = intstr.FromInt(8000)
 	)
 	// 解析json日志所需注解的前缀
-	prefix := fmt.Sprintf("co.elastic.logs.%s/", name)
+	//prefix := fmt.Sprintf("co.elastic.logs.%s/", name)
+
+	// 添加解析json日志所需的label
+	copyLabel := make(map[string]string, len(label))
+	for k, v := range label {
+		copyLabel[k] = v
+	}
+	copyLabel["logger"] = "json"
 
 	return &client_appsv1.DeploymentSpecApplyConfiguration{
 		// 配置部署的副本数量和selector
@@ -199,13 +206,13 @@ func getDataProcessingDeploymentSpec(name string, label map[string]string, optio
 			// pod使用和其控制器一样的name和label
 			ObjectMetaApplyConfiguration: &client_metav1.ObjectMetaApplyConfiguration{
 				Name:   &name,
-				Labels: label,
-				Annotations: map[string]string{
-					prefix + "json.keys_under_root": "true",
-					prefix + "json.add_error_key":   "true",
-					prefix + "json.message_key":     "message",
-					prefix + "json.expand_keys":     "true",
-				},
+				Labels: copyLabel,
+				//Annotations: map[string]string{
+				//	prefix + "json.keys_under_root": "true",
+				//	prefix + "json.add_error_key":   "true",
+				//	prefix + "json.message_key":     "message",
+				//	prefix + "json.expand_keys":     "true",
+				//},
 			},
 			Spec: &client_corev1.PodSpecApplyConfiguration{
 				// 配置需要挂载的volume
@@ -361,7 +368,14 @@ func getDataCollectionStatefulSetSpec(
 		servicePort     = intstr.FromInt(8000)
 	)
 	// 解析json日志所需注解的前缀
-	prefix := fmt.Sprintf("co.elastic.logs.%s/", name)
+	//prefix := fmt.Sprintf("co.elastic.logs.%s/", name)
+
+	// 添加解析json日志所需的label
+	copyLabel := make(map[string]string, len(label))
+	for k, v := range label {
+		copyLabel[k] = v
+	}
+	copyLabel["logger"] = "json"
 
 	return &client_appsv1.StatefulSetSpecApplyConfiguration{
 		// 配置部署的副本数量和selector
@@ -375,13 +389,13 @@ func getDataCollectionStatefulSetSpec(
 			// pod使用和其控制器一样的name和label
 			ObjectMetaApplyConfiguration: &client_metav1.ObjectMetaApplyConfiguration{
 				Name:   &name,
-				Labels: label,
-				Annotations: map[string]string{
-					prefix + "json.keys_under_root": "true",
-					prefix + "json.add_error_key":   "true",
-					prefix + "json.message_key":     "message",
-					prefix + "json.expand_keys":     "true",
-				},
+				Labels: copyLabel,
+				//Annotations: map[string]string{
+				//	prefix + "json.keys_under_root": "true",
+				//	prefix + "json.add_error_key":   "true",
+				//	prefix + "json.message_key":     "message",
+				//	prefix + "json.expand_keys":     "true",
+				//},
 			},
 			Spec: &client_corev1.PodSpecApplyConfiguration{
 				// 配置需要挂载的volume
