@@ -4,8 +4,6 @@ import (
 	"context"
 	v1 "gitee.com/moyusir/service-centre/api/serviceCenter/v1"
 	utilApi "gitee.com/moyusir/util/api/util/v1"
-	"github.com/go-kratos/kratos/v2/encoding"
-	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"github.com/imroc/req/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -184,36 +182,10 @@ func TestUserUsecase(t *testing.T) {
 		}
 	})
 
-	// 发送查询设备状态注册信息的请求
-	t.Run("Test_GetDeviceStateRegisterInfo", func(t *testing.T) {
-		client := req.C().DevMode().SetBaseURL(KONG_HTTP_URL)
-		response, err := client.R().
-			SetHeaders(map[string]string{
-				"X-Api-Key":      reply.Token,
-				"X-Service-Type": username + "-dp",
-			}).Get("/register-info/states/0")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if response.IsError() {
-			t.Fatal(response.Error())
-		}
-
-		registerInfo := new(utilApi.DeviceStateRegisterInfo)
-		err = encoding.GetCodec("json").Unmarshal(response.Bytes(), registerInfo)
-		if err != nil {
-			t.Fatal(err)
-		}
-		// 比较查询得到的注册信息和一开始注册上传的是否一样
-		if !proto.Equal(registerReq, stateInfo[0]) {
-			t.Errorf("wrong device state register info %v\n%v", registerReq, stateInfo[0])
-		}
-	})
-
 	t.Run("Test_WarningPushWebsocket", func(t *testing.T) {
 		// 建立接收故障信息推送的ws连接
 		conn, _, err := websocket.DefaultDialer.Dial(
-			"ws://kong.test.svc.cluster.local:8000/warnings/push",
+			"ws://kong.test.svc.cluster.local:8000/warnings/push/"+username,
 			http.Header{
 				"X-Api-Key":      {reply.Token},
 				"X-Service-Type": {username + "-dp"},
@@ -227,6 +199,32 @@ func TestUserUsecase(t *testing.T) {
 			t.Error(err)
 		}
 	})
+
+	// 发送查询设备状态注册信息的请求
+	//t.Run("Test_GetDeviceStateRegisterInfo", func(t *testing.T) {
+	//	client := req.C().DevMode().SetBaseURL(KONG_HTTP_URL)
+	//	response, err := client.R().
+	//		SetHeaders(map[string]string{
+	//			"X-Api-Key":      reply.Token,
+	//			"X-Service-Type": username + "-dp",
+	//		}).Get("/register-info/states/0")
+	//	if err != nil {
+	//		t.Fatal(err)
+	//	}
+	//	if response.IsError() {
+	//		t.Fatal(response.Error())
+	//	}
+	//
+	//	registerInfo := new(utilApi.DeviceStateRegisterInfo)
+	//	err = encoding.GetCodec("json").Unmarshal(response.Bytes(), registerInfo)
+	//	if err != nil {
+	//		t.Fatal(err)
+	//	}
+	//	// 比较查询得到的注册信息和一开始注册上传的是否一样
+	//	if !proto.Equal(registerReq, stateInfo[0]) {
+	//		t.Errorf("wrong device state register info %v\n%v", registerReq, stateInfo[0])
+	//	}
+	//})
 }
 func TestUser_Register(t *testing.T) {
 	// 测试用户利用违规的注册信息进行登录，校验是否成功
